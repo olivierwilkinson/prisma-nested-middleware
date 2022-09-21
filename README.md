@@ -104,7 +104,7 @@ Apache 2.0
 [node]: https://nodejs.org
 [build-badge]: https://github.com/olivierwilkinson/prisma-nested-middleware/workflows/prisma-nested-middleware/badge.svg
 [build]: https://github.com/olivierwilkinson/prisma-nested-middleware/actions?query=branch%3Amaster+workflow%3Aprisma-nested-middleware
-[version-badge]: https://img.shields.io/npm/v/olivierwilkinson/prisma-nested-middleware.svg?style=flat-square
+[version-badge]: https://img.shields.io/npm/v/prisma-nested-middleware.svg?style=flat-square
 [package]: https://www.npmjs.com/package/prisma-nested-middleware
 [downloads-badge]:https://img.shields.io/npm/dm/prisma-nested-middleware.svg?style=flat-square
 [npmtrends]: http://www.npmtrends.com/prisma-nested-middleware
