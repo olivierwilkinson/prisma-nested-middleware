@@ -41,7 +41,7 @@ npm install --save prisma-nested-middleware
 To make nested middleware you pass a [middleware function](https://www.prisma.io/docs/concepts/components/prisma-client/middleware) to `createNestedMiddleware` which returns modified middleware to be passed to Prisma client's `$use` method:
 
 ```javascript
-import { createNestedMiddlware } from 'prisma-nested-middleware'
+import { createNestedMiddleware } from 'prisma-nested-middleware'
 
 client.$use(createNestedMiddleware((params, next) => {
   // update params here
