@@ -43,7 +43,7 @@ To make nested middleware you pass a [middleware function](https://www.prisma.io
 ```javascript
 import { createNestedMiddleware } from 'prisma-nested-middleware'
 
-client.$use(createNestedMiddleware((params, next) => {
+client.$use(createNestedMiddleware(async (params, next) => {
   // update params here
   const result = await next(params)
   // update result here
