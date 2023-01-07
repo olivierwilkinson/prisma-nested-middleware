@@ -1,5 +1,5 @@
 /* eslint-disable import/no-unresolved */
-// @ts-expect-error unable to generate prisma client before building
+// @ts-ignore unable to generate prisma client before building
 import { Prisma } from '@prisma/client';
 
 import get from 'lodash/get';
@@ -9,20 +9,8 @@ if (!Prisma.dmmf) {
   throw new Error('Prisma DMMF not found, please generate Prisma client using `npx prisma generate`');
 }
 
-type Field = {
-  kind:  "scalar" | "object" | "enum" | "list";
-  relationName?: string;
-  name: string;
-  type: string;
-}
-
-type Model = {
-  name: string;
-  fields: Field[];
-}
-
-const relationsByModel: Record<string, Field[]> = {};
-Prisma.dmmf.datamodel.models.forEach((model: Model) => {
+const relationsByModel: Record<string, Prisma.DMMF.Field[]> = {};
+Prisma.dmmf.datamodel.models.forEach((model: Prisma.DMMF.Model) => {
   relationsByModel[model.name] = model.fields.filter(
     (field) => field.kind === 'object' && field.relationName
   );
@@ -71,7 +59,7 @@ function isWriteOperation(key: any): key is NestedAction {
 
 function extractWriteInfo(
   params: NestedParams,
-  model: string,
+  model: Prisma.ModelName,
   argPath: string
 ): WriteInfo[] {
   const arg = get(params.args, argPath, {});
@@ -92,9 +80,9 @@ function extractWriteInfo(
 
 function extractNestedWriteInfo(
   params: NestedParams,
-  relation: Field
+  relation: Prisma.DMMF.Field
 ): WriteInfo[] {
-  const model = relation.type;
+  const model = relation.type as Prisma.ModelName;
 
   switch (params.action) {
     case 'upsert':
