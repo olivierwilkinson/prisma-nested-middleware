@@ -156,20 +156,306 @@ describe("results", () => {
     });
   });
 
-  it.failing("allows middleware to modify deeply nested results", async () => {
+  it("allows middleware to modify results within nested results", async () => {
+    const nestedMiddleware = createNestedMiddleware(async (params, next) => {
+      const result = await next(params);
+      if (typeof result === "undefined") return;
+
+      if (params.model === "Profile") {
+        return addReturnedDate(result);
+      }
+
+      // modify profile first to check it is not overwritten by other calls
+      await wait(100);
+      return addReturnedDate(result);
+    });
+
+    const params = createParams("Post", "create", {
+      data: {
+        title: faker.lorem.sentence(),
+        author: {
+          create: {
+            email: faker.internet.email(),
+            profile: {
+              create: { bio: faker.lorem.sentence() },
+            },
+          },
+        },
+      },
+    });
+    const next = jest.fn(() =>
+      Promise.resolve({
+        id: faker.datatype.number(),
+        title: params.args.data.title,
+        author: {
+          id: faker.datatype.number(),
+          email: params.args.data.author.create.email,
+          profile: {
+            id: faker.datatype.number(),
+            bio: params.args.data.author.create.profile.create.bio,
+          },
+        },
+      })
+    );
+    const result = await nestedMiddleware(params, next);
+
+    expect(result).toEqual({
+      id: expect.any(Number),
+      title: params.args.data.title,
+      returned: expect.any(Date),
+      author: {
+        id: expect.any(Number),
+        email: params.args.data.author.create.email,
+        returned: expect.any(Date),
+        profile: {
+          id: expect.any(Number),
+          bio: params.args.data.author.create.profile.create.bio,
+          returned: expect.any(Date),
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify results within nested list results", async () => {
+    const nestedMiddleware = createNestedMiddleware(async (params, next) => {
+      const result = await next(params);
+      if (typeof result === "undefined") return;
+
+      if (params.model === "User") {
+        return addReturnedDate(result);
+      }
+
+      // modify author first to check it is not overwritten by other calls
+      await wait(100);
+      return addReturnedDate(result);
+    });
+
+    const params = createParams("Post", "create", {
+      data: {
+        title: faker.lorem.sentence(),
+        authorId: faker.datatype.number(),
+        comments: {
+          create: {
+            content: faker.lorem.sentence(),
+            author: {
+              create: {
+                email: faker.internet.email(),
+              },
+            },
+          },
+        },
+      },
+    });
+    const next = jest.fn(() =>
+      Promise.resolve({
+        id: faker.datatype.number(),
+        title: params.args.data.title,
+        authorId: params.args.data.authorId,
+        comments: [
+          {
+            id: faker.datatype.number(),
+            content: params.args.data.comments.create.content,
+            author: {
+              id: faker.datatype.number(),
+              email: params.args.data.comments.create.author.create.email,
+            },
+          },
+        ],
+      })
+    );
+    const result = await nestedMiddleware(params, next);
+
+    expect(result).toEqual({
+      id: expect.any(Number),
+      title: params.args.data.title,
+      authorId: params.args.data.authorId,
+      returned: expect.any(Date),
+      comments: [
+        {
+          id: expect.any(Number),
+          content: params.args.data.comments.create.content,
+          returned: expect.any(Date),
+          author: {
+            id: expect.any(Number),
+            email: params.args.data.comments.create.author.create.email,
+            returned: expect.any(Date),
+          },
+        },
+      ],
+    });
+  });
+
+  it("allows middleware to modify results within doubly nested list results", async () => {
+    const nestedMiddleware = createNestedMiddleware(async (params, next) => {
+      const result = await next(params);
+      if (typeof result === "undefined") return;
+
+      if (params.model === "User") {
+        return addReturnedDate(result);
+      }
+
+      // modify author first to check it is not overwritten by other calls
+      await wait(100);
+      return addReturnedDate(result);
+    });
+
+    const params = createParams("Post", "create", {
+      data: {
+        title: faker.lorem.sentence(),
+        authorId: faker.datatype.number(),
+        comments: {
+          create: {
+            content: faker.lorem.sentence(),
+            authorId: faker.datatype.number(),
+            replies: {
+              create: {
+                content: faker.lorem.sentence(),
+                author: {
+                  create: {
+                    email: faker.internet.email(),
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    const next = jest.fn(() =>
+      Promise.resolve({
+        id: faker.datatype.number(),
+        title: params.args.data.title,
+        authorId: params.args.data.authorId,
+        comments: [
+          {
+            id: faker.datatype.number(),
+            content: params.args.data.comments.create.content,
+            authorId: params.args.data.comments.create.authorId,
+            replies: [
+              {
+                id: faker.datatype.number(),
+                content:
+                  params.args.data.comments.create.replies.create.content,
+                author: {
+                  id: faker.datatype.number(),
+                  email:
+                    params.args.data.comments.create.replies.create.author
+                      .create.email,
+                },
+              },
+            ],
+          },
+        ],
+      })
+    );
+    const result = await nestedMiddleware(params, next);
+
+    expect(result).toEqual({
+      id: expect.any(Number),
+      title: params.args.data.title,
+      authorId: params.args.data.authorId,
+      returned: expect.any(Date),
+      comments: [
+        {
+          id: expect.any(Number),
+          content: params.args.data.comments.create.content,
+          authorId: params.args.data.comments.create.authorId,
+          returned: expect.any(Date),
+          replies: [
+            {
+              id: expect.any(Number),
+              content: params.args.data.comments.create.replies.create.content,
+              returned: expect.any(Date),
+              author: {
+                id: expect.any(Number),
+                email: params.args.data.comments.create.replies.create.author.create.email,
+                returned: expect.any(Date),
+              },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("allows middleware to modify list results within nested results", async () => {
+    const nestedMiddleware = createNestedMiddleware(async (params, next) => {
+      const result = await next(params);
+      if (typeof result === "undefined") return;
+
+      if (params.model === "Post") {
+        return addReturnedDate(result);
+      }
+
+      // modify posts first to check they are not overwritten by other calls
+      await wait(100);
+      return addReturnedDate(result);
+    });
+
+    const params = createParams("Profile", "create", {
+      data: {
+        bio: faker.lorem.sentence(),
+        user: {
+          create: {
+            email: faker.internet.email(),
+            posts: {
+              create: {
+                title: faker.lorem.sentence(),
+              },
+            },
+          },
+        },
+      },
+    });
+    const next = jest.fn(() =>
+      Promise.resolve({
+        id: faker.datatype.number(),
+        bio: params.args.data.bio,
+        user: {
+          id: faker.datatype.number(),
+          email: params.args.data.user.create.email,
+          posts: [
+            {
+              id: faker.datatype.number(),
+              title: params.args.data.user.create.posts.create.title,
+            },
+          ],
+        },
+      })
+    );
+    const result = await nestedMiddleware(params, next);
+
+    expect(result).toEqual({
+      id: expect.any(Number),
+      bio: params.args.data.bio,
+      returned: expect.any(Date),
+      user: {
+        id: expect.any(Number),
+        email: params.args.data.user.create.email,
+        returned: expect.any(Date),
+        posts: [
+          {
+            id: expect.any(Number),
+            title: params.args.data.user.create.posts.create.title,
+            returned: expect.any(Date),
+          },
+        ],
+      },
+    });
+  });
+
+  it("allows middleware to modify list results within nested list results", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       const result = await next(params);
       if (typeof result === "undefined") return;
 
       if (params.model === "Comment") {
-        await wait(100);
-      }
-      // modify Post result last to make sure comments are not overwritten
-      if (params.model === "Post") {
-        await wait(200);
+        return addReturnedDate(result);
       }
 
-      return result;
+      // modify comments first to check they are not overwritten by other calls
+      await wait(100);
+      return addReturnedDate(result);
     });
 
     const params = createParams("User", "create", {
@@ -179,10 +465,16 @@ describe("results", () => {
           create: {
             title: faker.lorem.sentence(),
             comments: {
-              create: {
-                content: faker.lorem.sentence(),
-                authorId: faker.datatype.number(),
-              },
+              create: [
+                {
+                  content: faker.lorem.sentence(),
+                  authorId: faker.datatype.number(),
+                },
+                {
+                  content: faker.lorem.sentence(),
+                  authorId: faker.datatype.number(),
+                },
+              ],
             },
           },
         },
@@ -196,12 +488,7 @@ describe("results", () => {
           {
             id: faker.datatype.number(),
             title: params.args.data.posts.create.title,
-            comments: [
-              {
-                id: faker.datatype.number(),
-                content: params.args.data.posts.create.comments.create.content,
-              },
-            ],
+            comments: params.args.data.posts.create.comments.create,
           },
         ],
       })
@@ -211,17 +498,18 @@ describe("results", () => {
     expect(result).toEqual({
       id: expect.any(Number),
       email: params.args.data.email,
+      returned: expect.any(Date),
       posts: [
         {
           id: expect.any(Number),
           title: params.args.data.posts.create.title,
-          comments: [
-            {
-              id: expect.any(Number),
-              content: params.args.data.posts.create.comments.create.content,
+          returned: expect.any(Date),
+          comments: params.args.data.posts.create.comments.create.map(
+            (comment: any) => ({
+              ...comment,
               returned: expect.any(Date),
-            },
-          ],
+            })
+          ),
         },
       ],
     });
