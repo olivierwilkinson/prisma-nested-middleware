@@ -8,9 +8,31 @@ type DelegateByModel<Model extends Prisma.ModelName> = Model extends "User"
   ? Prisma.ProfileDelegate<undefined>
   : never;
 
+type SelectByModel<Model extends Prisma.ModelName> = Model extends "User"
+  ? Prisma.UserSelect
+  : Model extends "Post"
+  ? Prisma.PostSelect
+  : Model extends "Profile"
+  ? Prisma.ProfileSelect
+  : never;
+
+type IncludeByModel<Model extends Prisma.ModelName> = Model extends "User"
+  ? Prisma.UserInclude
+  : Model extends "Post"
+  ? Prisma.PostInclude
+  : Model extends "Profile"
+  ? Prisma.ProfileInclude
+  : never;
+
+type ActionByModel<Model extends Prisma.ModelName> =
+  | keyof DelegateByModel<Model>
+  | "connectOrCreate"
+  | "select"
+  | "include";
+
 type ArgsByAction<
   Model extends Prisma.ModelName,
-  Action extends keyof DelegateByModel<Model> | "connectOrCreate"
+  Action extends ActionByModel<Model>
 > = Action extends "create"
   ? Parameters<DelegateByModel<Model>["create"]>[0]
   : Action extends "update"
@@ -23,11 +45,21 @@ type ArgsByAction<
   ? Parameters<DelegateByModel<Model>["deleteMany"]>[0]
   : Action extends "updateMany"
   ? Parameters<DelegateByModel<Model>["updateMany"]>[0]
+  : Action extends "findUnique"
+  ? Parameters<DelegateByModel<Model>["findUnique"]>[0]
+  : Action extends "findFirst"
+  ? Parameters<DelegateByModel<Model>["findFirst"]>[0]
+  : Action extends "findMany"
+  ? Parameters<DelegateByModel<Model>["findMany"]>[0]
   : Action extends "connectOrCreate"
   ? {
       where: Parameters<DelegateByModel<Model>["findUnique"]>[0];
       create: Parameters<DelegateByModel<Model>["create"]>[0];
     }
+  : Action extends "select"
+  ? SelectByModel<Model>
+  : Action extends "include"
+  ? IncludeByModel<Model>
   : never;
 
 /**
@@ -36,9 +68,7 @@ type ArgsByAction<
  */
 export const createParams = <
   Model extends Prisma.ModelName,
-  Action extends keyof DelegateByModel<Model> | "connectOrCreate" =
-    | keyof DelegateByModel<Model>
-    | "connectOrCreate"
+  Action extends ActionByModel<Model> = ActionByModel<Model>
 >(
   model: Model,
   action: Action,

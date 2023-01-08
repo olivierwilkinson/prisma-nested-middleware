@@ -57,7 +57,7 @@ The middleware function passed to `createNestedMiddleware` is called for every
 
 There are some differences to note when using nested middleware:
 
-- the list of actions that might be in params is expanded to include `connectOrCreate`
+- the list of actions that might be in params is expanded to include `connectOrCreate`, `include` and `select`.
 - The parent operation's params have been added to the params of nested middleware as a `scope` object. This is useful when the parent is relevant, for example when handling a `connectOrCreate` and you need to know the parent being connected to.
 - when handling a nested `create` action `params.args` does not include a `data` field, that must be handled manually. You can use the existence of `params.scope` to know when to handle a nested `create`.
 - the return value of `next` matches the part of the response that the middleware was called for. For example if the middleware function is called for a nested create, the `next` function resolves with the value of that create.
@@ -71,18 +71,31 @@ It is helpful to walk through the lifecycle of an operation:
 For the following update
 
 ```javascript
-client.country.update({
-  where: { id: "imagination-land" },
+client.user.update({
+  where: { id: 1 },
   data: {
-    nationalDish: {
+    comments: {
       update: {
-        where: { id: "stardust-pie" },
+        where: { id: 2 },
         data: {
-          keyIngredient: {
+          post: {
             connectOrCreate: {
-              create: { name: "Stardust" },
-              connect: { id: "stardust" },
+              where: { id: 3 },
+              create: {
+                title: 'Hello World',
+              },
             },
+          },
+        },
+      },
+    },
+  },
+  include: {
+    comments: {
+      include: {
+        post: {
+          select: {
+            title: true,
           },
         },
       },
@@ -91,20 +104,22 @@ client.country.update({
 });
 ```
 
-`createNestedMiddleware` calls the passed middleware function with params in the following order:
+`createNestedMiddleware` calls the passed middleware function from the most deeply nested operation up to the top level operation. For the above example the middleware function is called in the following order:
 
-1. `{ model: 'Recipe', action: 'update', args: { where: { id: 'stardust-pie' }, data: {...} } }`
-2. `{ model: 'Food', action: 'connectOrCreate', args: { create: {...}, connect: {...} } }`
-3. `{ model: 'Country', action: 'update', args: { where: { id: 'imagination-land', data: {...} } }`
+1. `{ model: 'Post', action: 'connectOrCreate', args: { create: {...}, connect: {...} } }`
+2. `{ model: 'Post', action: 'select', args: { title: true } }`
+3. `{ model: 'Post', action: 'include', args: { select: { title: true } } }`
+4. `{ model: 'Comment', action: 'update', args: { where: { id: 2 }, data: {...} } }`
+5. `{ model: 'Comment', action: 'include', args: { include: { post: { select: { title: true } } } } }`
+6. `{ model: 'User', action: 'update', args: { where: { id: 1 }, data: {...} } }`
 
-Once all of the nested middleware have passed params to `next` the params for the `Country` model are updated with any changes made; these params are then passed to the `Country` model's `next` function.
+The params object passed to the `next` function will modify the relevant part of the original params object. Once all the middleware calls have called `next` the updated params object is passed to the Prisma client.
 
-When the `Country` model's `next` resolves the `next` of the nested middleware are also resolved with the slice relevent to them. So the middleware called for the `Recipe` model resolves with the `nationalDish`, the middleware for the `Food` resolves with the `keyIngredient`.
+The result of the Prisma client operation is then returned from the `next` functions according to the part of the result they are concerned with. So the `next` function called for the `User` model resolves with the `User` model's result, the `next` function called for the `Comment` model resolves with the `Comment` model's result, and so on.
 
-Finally the return values from the nested middleware are used to modify the `Country` result in a similar way to params,
-and that modified object is the one `client.country.update` resolves with.
+Modifications to the result are made in the same way as modifications to the params. Once all the middleware calls have returned their slice of the result the combined result object is returned from the Prisma client method, in this case `client.user.update`.
 
-If any middleware throws an error then `client.country.update` will throw with that error.
+If any middleware throws an error at any point then `client.country.update` will throw with that error.
 
 ### Operations Nested in Lists
 

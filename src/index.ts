@@ -18,7 +18,11 @@ Prisma.dmmf.datamodel.models.forEach((model: Prisma.DMMF.Model) => {
   );
 });
 
-export type NestedAction = Prisma.PrismaAction | "connectOrCreate";
+export type NestedReadAction = "include" | "select";
+export type NestedAction =
+  | Prisma.PrismaAction
+  | NestedReadAction
+  | "connectOrCreate";
 
 export type NestedParams = Omit<Prisma.MiddlewareParams, "action"> & {
   action: NestedAction;
@@ -30,7 +34,7 @@ export type NestedMiddleware<T = any> = (
   next: (modifiedParams: NestedParams) => Promise<T>
 ) => Promise<T>;
 
-type WriteInfo = {
+type NestedOperationInfo = {
   params: NestedParams;
   argPath: string;
 };
@@ -40,78 +44,132 @@ type PromiseCallbackRef = {
   reject: (reason?: any) => void;
 };
 
-const writeOperationsSupportingNestedWrites: NestedAction[] = [
+const readOperations: NestedReadAction[] = ["include", "select"];
+const writeOperations: NestedAction[] = [
   "create",
   "update",
   "upsert",
   "connectOrCreate",
-];
-
-const writeOperations: NestedAction[] = [
-  ...writeOperationsSupportingNestedWrites,
   "createMany",
   "updateMany",
   "delete",
   "deleteMany",
 ];
 
+function isReadOperation(key: any): key is NestedReadAction {
+  return readOperations.includes(key);
+}
+
 function isWriteOperation(key: any): key is NestedAction {
   return writeOperations.includes(key);
 }
 
-function extractWriteInfo(
-  params: NestedParams,
-  model: Prisma.ModelName,
-  argPath: string
-): WriteInfo[] {
-  const arg = get(params.args, argPath, {});
-
-  return Object.keys(arg)
-    .filter(isWriteOperation)
-    .map((operation) => ({
-      argPath,
-      params: {
-        ...params,
-        model,
-        action: operation,
-        args: arg[operation],
-        scope: params,
-      },
-    }));
-}
-
-function extractNestedWriteInfo(
+function getNestedWriteArgPaths(
   params: NestedParams,
   relation: Prisma.DMMF.Field
-): WriteInfo[] {
-  const model = relation.type as Prisma.ModelName;
-
-  switch (params.action) {
-    case "upsert":
-      return [
-        ...extractWriteInfo(params, model, `update.${relation.name}`),
-        ...extractWriteInfo(params, model, `create.${relation.name}`),
-      ];
-
-    case "create":
-      // nested creates use args as data instead of including a data field.
-      if (params.scope) {
-        return extractWriteInfo(params, model, relation.name);
-      }
-
-      return extractWriteInfo(params, model, `data.${relation.name}`);
-
-    case "update":
-    case "updateMany":
-    case "createMany":
-      return extractWriteInfo(params, model, `data.${relation.name}`);
-
-    case "connectOrCreate":
-      return extractWriteInfo(params, model, `create.${relation.name}`);
-
-    default:
-      return [];
+): string[] {
+  if (params.action === "upsert") {
+    return [`update.${relation.name}`, `create.${relation.name}`];
   }
+
+  // nested create args are not nested under data
+  if (params.action === "create" && params.scope) {
+    return [relation.name];
+  }
+
+  if (
+    ["create", "update", "updateMany", "createMany"].includes(params.action)
+  ) {
+    return [`data.${relation.name}`];
+  }
+
+  if (params.action === "connectOrCreate") {
+    return [`create.${relation.name}`];
+  }
+
+  return [];
+}
+
+function getNestedReadArgPaths(
+  operation: NestedReadAction,
+  relation: Prisma.DMMF.Field
+) {
+  if (operation === "include") {
+    return [`include.${relation.name}`];
+  }
+
+  if (operation === "select") {
+    // nested select first so we go from the most nested to the least nested
+    return [`include.${relation.name}.select`, `select.${relation.name}`];
+  }
+
+  return [];
+}
+
+function extractNestedWriteOperations(
+  params: NestedParams,
+  relation: Prisma.DMMF.Field
+): NestedOperationInfo[] {
+  const model = relation.type as Prisma.ModelName;
+  const nestedWriteOperations: NestedOperationInfo[] = [];
+
+  getNestedWriteArgPaths(params, relation).forEach((argPath) => {
+    const arg = get(params.args, argPath, {});
+    nestedWriteOperations.push(
+      ...Object.keys(arg)
+        .filter(isWriteOperation)
+        .map((operation) => ({
+          argPath,
+          params: {
+            ...params,
+            model,
+            action: operation,
+            args: arg[operation],
+            scope: params,
+          },
+        }))
+    );
+  });
+
+  return nestedWriteOperations;
+}
+
+function extractNestedReadOperations(
+  params: NestedParams,
+  relation: Prisma.DMMF.Field
+): NestedOperationInfo[] {
+  const model = relation.type as Prisma.ModelName;
+  const nestedReadOperations: NestedOperationInfo[] = [];
+
+  readOperations.forEach((operation) => {
+    getNestedReadArgPaths(operation, relation).forEach((argPath) => {
+      const arg = get(params.args, argPath);
+      if (arg) {
+        nestedReadOperations.push({
+          argPath,
+          params: {
+            ...params,
+            model,
+            action: operation,
+            args: arg,
+            scope: params,
+          },
+        });
+      }
+    });
+  });
+
+  return nestedReadOperations;
+}
+
+function extractNestedOperations(
+  params: NestedParams,
+  relation: Prisma.DMMF.Field
+): NestedOperationInfo[] {
+  return [
+    ...extractNestedWriteOperations(params, relation),
+    ...extractNestedReadOperations(params, relation),
+  ];
 }
 
 const parentSymbol = Symbol("parent");
@@ -191,98 +249,95 @@ export function createNestedMiddleware<T>(
   const nestedMiddleware: NestedMiddleware = async (params, next) => {
     const relations = relationsByModel[params.model || ""] || [];
     const finalParams = params;
-    const nestedWrites: {
+    const nestedOperations: {
       relationName: string;
       nextReached: Promise<unknown>;
       resultCallbacks: PromiseCallbackRef;
       result: Promise<any>;
     }[] = [];
 
-    if (writeOperationsSupportingNestedWrites.includes(params.action)) {
-      relations.forEach((relation) =>
-        extractNestedWriteInfo(params, relation).forEach((nestedWriteInfo) => {
-          // store nextReached promise callbacks to set whether next has been
-          // called or if middleware has thrown beforehand
-          const nextReachedCallbacks: PromiseCallbackRef = {
-            resolve() {},
-            reject() {},
-          };
+    relations.forEach((relation) =>
+      extractNestedOperations(params, relation).forEach((nestedOperation) => {
+        // store nextReached promise callbacks to set whether next has been
+        // called or if middleware has thrown beforehand
+        const nextReachedCallbacks: PromiseCallbackRef = {
+          resolve() {},
+          reject() {},
+        };
 
-          // store result promise callbacks so we can settle it once we know how
-          const resultCallbacks: PromiseCallbackRef = {
-            resolve() {},
-            reject() {},
-          };
+        // store result promise callbacks so we can settle it once we know how
+        const resultCallbacks: PromiseCallbackRef = {
+          resolve() {},
+          reject() {},
+        };
 
-          // wrap params updated callback in a promise so we can await it
-          const nextReached = new Promise<void>((resolve, reject) => {
-            nextReachedCallbacks.resolve = resolve;
-            nextReachedCallbacks.reject = reject;
-          });
+        // wrap params updated callback in a promise so we can await it
+        const nextReached = new Promise<void>((resolve, reject) => {
+          nextReachedCallbacks.resolve = resolve;
+          nextReachedCallbacks.reject = reject;
+        });
 
-          const result = nestedMiddleware(
-            nestedWriteInfo.params,
-            (updatedParams) => {
-              // Update final params to include nested middleware changes.
-              // Scope updates to [argPath].[action] to avoid breaking params
-              set(
-                finalParams.args,
-                `${nestedWriteInfo.argPath}.${updatedParams.action}`,
-                updatedParams.args
-              );
+        const result = nestedMiddleware(
+          nestedOperation.params,
+          (updatedParams) => {
+            // Update final params to include nested middleware changes.
+            // Scope updates to [argPath].[action] to avoid breaking params
+            set(
+              finalParams.args,
+              // no nested action in read operations
+              isReadOperation(updatedParams.action)
+                ? nestedOperation.argPath
+                : `${nestedOperation.argPath}.${updatedParams.action}`,
+              updatedParams.args
+            );
 
-              // notify parent middleware that params have been updated
-              nextReachedCallbacks.resolve();
+            // notify parent middleware that params have been updated
+            nextReachedCallbacks.resolve();
 
-              // only resolve nested next when resolveRef.resolve is called
-              return new Promise((resolve, reject) => {
-                resultCallbacks.resolve = resolve;
-                resultCallbacks.reject = reject;
-              });
-            }
-          ).catch((e) => {
-            // reject nextReached promise so if it has not already resolved the
-            // parent will catch the error when awaiting it.
-            nextReachedCallbacks.reject(e);
+            // only resolve nested next when resolveRef.resolve is called
+            return new Promise((resolve, reject) => {
+              resultCallbacks.resolve = resolve;
+              resultCallbacks.reject = reject;
+            });
+          }
+        ).catch((e) => {
+          // reject nextReached promise so if it has not already resolved the
+          // parent will catch the error when awaiting it.
+          nextReachedCallbacks.reject(e);
 
-            // rethrow error so the parent catches it when awaiting `result`
-            throw e;
-          });
+          // rethrow error so the parent catches it when awaiting `result`
+          throw e;
+        });
 
-          nestedWrites.push({
-            relationName: relation.name,
-            nextReached,
-            resultCallbacks,
-            result,
-          });
-        })
-      );
-    }
+        nestedOperations.push({
+          relationName: relation.name,
+          nextReached,
+          resultCallbacks,
+          result,
+        });
+      })
+    );
 
     try {
       // wait for all nested middleware to have reached next and updated params
-      await Promise.all(nestedWrites.map(({ nextReached }) => nextReached));
+      await Promise.all(nestedOperations.map(({ nextReached }) => nextReached));
 
       // evaluate result from parent middleware
       const result = await middleware(finalParams, next);
 
       // resolve nested middleware next functions with relevant slice of result
       await Promise.all(
-        nestedWrites.map(async (nestedWrite) => {
-          // result cannot be null because only writes can have nested writes.
-          const nestedResult = getNestedResult(
-            result,
-            nestedWrite.relationName
-          );
-
+        nestedOperations.map(async (nestedOperation) => {
           // if relationship hasn't been included nestedResult is undefined.
-          nestedWrite.resultCallbacks.resolve(nestedResult);
+          nestedOperation.resultCallbacks.resolve(
+            result && getNestedResult(result, nestedOperation.relationName)
+          );
 
           // set final result relation to be result of nested middleware
           setNestedResult(
             result,
-            nestedWrite.relationName,
-            await nestedWrite.result
+            nestedOperation.relationName,
+            await nestedOperation.result
           );
         })
       );
@@ -291,9 +346,9 @@ export function createNestedMiddleware<T>(
     } catch (e) {
       // When parent rejects also reject the nested next functions promises
       await Promise.all(
-        nestedWrites.map((nestedWrite) => {
-          nestedWrite.resultCallbacks.reject(e);
-          return nestedWrite.result;
+        nestedOperations.map((nestedOperation) => {
+          nestedOperation.resultCallbacks.reject(e);
+          return nestedOperation.result;
         })
       );
       throw e;
