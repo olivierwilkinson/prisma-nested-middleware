@@ -38,7 +38,7 @@ describe("params", () => {
   });
 
   it("allows middleware to modify root params asynchronously", async () => {
-    const nestedMiddleware = createNestedMiddleware(async (params, next) => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
       return next({
         ...params,
         args: {
@@ -147,6 +147,319 @@ describe("params", () => {
             create: {
               title: params.args.data.posts.create.title,
               number: expect.any(Number),
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify include params", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "create" && params.model === "User") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            include: {
+              posts: params.args.include.posts && {
+                include: {
+                  comments: true,
+                },
+              },
+            },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+      },
+      include: {
+        posts: true,
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        include: {
+          posts: {
+            include: {
+              comments: true,
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify include params through include actions", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "include" && params.model === "Post") {
+        return next({
+          ...params,
+          args: {
+            orderBy: { createdAt: "desc" },
+            comments: true,
+            skip: params.args.skip + 1,
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+      },
+      include: {
+        posts: {
+          orderBy: { createdAt: "asc" },
+          skip: 10,
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        include: {
+          ...params.args.include,
+          posts: {
+            ...params.args.include.posts,
+            orderBy: { createdAt: "desc" },
+            comments: true,
+            skip: 11,
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify deeply nested include params through include action", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "include" && params.model === "Comment") {
+        if (params.args.skip) {
+          params.args.skip += 1;
+        }
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            orderBy: { createdAt: "desc" },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+      },
+      include: {
+        posts: {
+          include: {
+            comments: {
+              include: { replies: { skip: 10 } },
+            },
+          },
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        include: {
+          posts: {
+            include: {
+              comments: {
+                orderBy: { createdAt: "desc" },
+                include: {
+                  replies: {
+                    orderBy: { createdAt: "desc" },
+                    skip: 11,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify select params", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "create" && params.model === "User") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            select: {
+              email: true,
+              posts: params.args.select.posts && {
+                select: {
+                  title: true,
+                },
+              },
+            },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+      },
+      select: { posts: true },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        select: {
+          email: true,
+          posts: {
+            select: {
+              title: true,
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify select params through select action", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "select" && params.model === "Post") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            select: {
+              title: true,
+              comments: params.args.select.comments && {
+                select: {
+                  content: true,
+                },
+              },
+            },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+      },
+      select: {
+        posts: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        select: {
+          posts: {
+            select: {
+              title: true,
+              comments: {
+                select: {
+                  content: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify deeply nested select params through select action", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "select" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            select: {
+              ...(typeof params.args.select === "boolean"
+                ? {}
+                : params.args.select),
+              content: true,
+            },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+      },
+      select: {
+        posts: {
+          select: {
+            comments: {
+              select: { replies: true },
+            },
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        select: {
+          posts: {
+            select: {
+              comments: {
+                select: {
+                  content: true,
+                  replies: {
+                    select: {
+                      content: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
