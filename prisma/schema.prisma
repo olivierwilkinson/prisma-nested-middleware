@@ -35,8 +35,8 @@ model Comment {
   content     String
   author      User      @relation(fields: [authorId], references: [id])
   authorId    Int
-  post        Post      @relation(fields: [postId], references: [id])
-  postId      Int
+  post        Post?      @relation(fields: [postId], references: [id])
+  postId      Int?
   repliedTo   Comment?  @relation("replies", fields: [repliedToId], references: [id])
   repliedToId Int?
   replies     Comment[] @relation("replies")

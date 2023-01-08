@@ -114,6 +114,77 @@ function extractNestedWriteInfo(
   }
 }
 
+const parentSymbol = Symbol("parent");
+
+function addParentToResult(parent: any, result: any) {
+  if (!Array.isArray(result)) {
+    return { ...result, [parentSymbol]: parent };
+  }
+
+  return result.map((item) => ({ ...item, [parentSymbol]: parent }));
+}
+
+function removeParentFromResult(result: any) {
+  if (!Array.isArray(result)) {
+    const { [parentSymbol]: _, ...rest } = result;
+    return rest;
+  }
+
+  return result.map(({ [parentSymbol]: _, ...rest }: any) => rest);
+}
+
+function getNestedResult(result: any, relationName: string) {
+  if (!Array.isArray(result)) {
+    return get(result, relationName);
+  }
+
+  return result.reduce((acc, item) => {
+    const itemResult = get(item, relationName);
+    if (typeof itemResult === "undefined") {
+      return acc;
+    }
+
+    return acc.concat(addParentToResult(item, itemResult));
+  }, []);
+}
+
+function setNestedResult(
+  result: any,
+  relationName: string,
+  modifiedResult: any
+) {
+  if (!Array.isArray(result)) {
+    return set(result, relationName, modifiedResult);
+  }
+
+  result.forEach((item: any) => {
+    const originalResult = get(item, relationName);
+
+    // if original result was an array we need to filter the result to match
+    if (Array.isArray(originalResult)) {
+      return set(
+        item,
+        relationName,
+        removeParentFromResult(
+          modifiedResult.filter(
+            (modifiedItem: any) => modifiedItem[parentSymbol] === item
+          )
+        )
+      );
+    }
+
+    // if the orginal result was not an array we can just set the result
+    const modifiedResultItem = modifiedResult.find(
+      ({ [parentSymbol]: parent }: any) => parent === item
+    );
+    return set(
+      item,
+      relationName,
+      modifiedResultItem && removeParentFromResult(modifiedResultItem)
+    );
+  });
+}
+
 export function createNestedMiddleware<T>(
   middleware: NestedMiddleware
 ): Prisma.Middleware<T> {
@@ -199,13 +270,20 @@ export function createNestedMiddleware<T>(
       await Promise.all(
         nestedWrites.map(async (nestedWrite) => {
           // result cannot be null because only writes can have nested writes.
-          const nestedResult = get(result, nestedWrite.relationName);
+          const nestedResult = getNestedResult(
+            result,
+            nestedWrite.relationName
+          );
 
           // if relationship hasn't been included nestedResult is undefined.
           nestedWrite.resultCallbacks.resolve(nestedResult);
 
           // set final result relation to be result of nested middleware
-          set(result, nestedWrite.relationName, await nestedWrite.result);
+          setNestedResult(
+            result,
+            nestedWrite.relationName,
+            await nestedWrite.result
+          );
         })
       );
 
