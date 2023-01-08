@@ -16,7 +16,10 @@
     "no-undef": "off",
     "no-use-before-define": "off",
     "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": ["error"],
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }
+    ],
     "max-lines-per-function": "off",
     "consistent-return": "off",
     "jest/no-if": "off"
