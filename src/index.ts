@@ -1,24 +1,26 @@
 /* eslint-disable import/no-unresolved */
 // @ts-ignore unable to generate prisma client before building
-import { Prisma } from '@prisma/client';
+import { Prisma } from "@prisma/client";
 
-import get from 'lodash/get';
-import set from 'lodash/set';
+import get from "lodash/get";
+import set from "lodash/set";
 
 if (!Prisma.dmmf) {
-  throw new Error('Prisma DMMF not found, please generate Prisma client using `npx prisma generate`');
+  throw new Error(
+    "Prisma DMMF not found, please generate Prisma client using `npx prisma generate`"
+  );
 }
 
 const relationsByModel: Record<string, Prisma.DMMF.Field[]> = {};
 Prisma.dmmf.datamodel.models.forEach((model: Prisma.DMMF.Model) => {
   relationsByModel[model.name] = model.fields.filter(
-    (field) => field.kind === 'object' && field.relationName
+    (field) => field.kind === "object" && field.relationName
   );
 });
 
-export type NestedAction = Prisma.PrismaAction | 'connectOrCreate';
+export type NestedAction = Prisma.PrismaAction | "connectOrCreate";
 
-export type NestedParams = Omit<Prisma.MiddlewareParams, 'action'> & {
+export type NestedParams = Omit<Prisma.MiddlewareParams, "action"> & {
   action: NestedAction;
   scope?: NestedParams;
 };
@@ -39,18 +41,18 @@ type PromiseCallbackRef = {
 };
 
 const writeOperationsSupportingNestedWrites: NestedAction[] = [
-  'create',
-  'update',
-  'upsert',
-  'connectOrCreate',
+  "create",
+  "update",
+  "upsert",
+  "connectOrCreate",
 ];
 
 const writeOperations: NestedAction[] = [
   ...writeOperationsSupportingNestedWrites,
-  'createMany',
-  'updateMany',
-  'delete',
-  'deleteMany',
+  "createMany",
+  "updateMany",
+  "delete",
+  "deleteMany",
 ];
 
 function isWriteOperation(key: any): key is NestedAction {
@@ -85,13 +87,13 @@ function extractNestedWriteInfo(
   const model = relation.type as Prisma.ModelName;
 
   switch (params.action) {
-    case 'upsert':
+    case "upsert":
       return [
         ...extractWriteInfo(params, model, `update.${relation.name}`),
         ...extractWriteInfo(params, model, `create.${relation.name}`),
       ];
 
-    case 'create':
+    case "create":
       // nested creates use args as data instead of including a data field.
       if (params.scope) {
         return extractWriteInfo(params, model, relation.name);
@@ -99,12 +101,12 @@ function extractNestedWriteInfo(
 
       return extractWriteInfo(params, model, `data.${relation.name}`);
 
-    case 'update':
-    case 'updateMany':
-    case 'createMany':
+    case "update":
+    case "updateMany":
+    case "createMany":
       return extractWriteInfo(params, model, `data.${relation.name}`);
 
-    case 'connectOrCreate':
+    case "connectOrCreate":
       return extractWriteInfo(params, model, `create.${relation.name}`);
 
     default:
@@ -116,7 +118,7 @@ export function createNestedMiddleware<T>(
   middleware: NestedMiddleware
 ): Prisma.Middleware<T> {
   const nestedMiddleware: NestedMiddleware = async (params, next) => {
-    const relations = relationsByModel[params.model || ''] || [];
+    const relations = relationsByModel[params.model || ""] || [];
     const finalParams = params;
     const nestedWrites: {
       relationName: string;
