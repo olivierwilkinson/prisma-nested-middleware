@@ -575,36 +575,38 @@ describe("results", () => {
       ],
     });
   });
-  
-  it('allows middleware to modify selected in nested include through select action', async () => {
+
+  it("allows middleware to modify selected in nested include through select action", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       const result = await next(params);
       if (!result) return;
 
-      if (params.action === 'select' && params.model === 'Comment') {
+      if (params.action === "select" && params.model === "Comment") {
         return addReturnedDate(result);
       }
 
       return result;
     });
-       
-    const next = jest.fn((params) => Promise.resolve({
-      id: faker.datatype.number(),
-      email: params.args.data.email,
-      posts: [
-        {
-          id: faker.datatype.number(),
-          title: params.args.data.posts.create.title,
-          comments: [
-            {
-              id: faker.datatype.number(),
-              content: faker.lorem.sentence(),
-            },
-          ],
-        },
-      ],
-    }));
-    const params = createParams('User', 'create', {
+
+    const next = jest.fn((params) =>
+      Promise.resolve({
+        id: faker.datatype.number(),
+        email: params.args.data.email,
+        posts: [
+          {
+            id: faker.datatype.number(),
+            title: params.args.data.posts.create.title,
+            comments: [
+              {
+                id: faker.datatype.number(),
+                content: faker.lorem.sentence(),
+              },
+            ],
+          },
+        ],
+      })
+    );
+    const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
         posts: { create: { title: faker.lorem.sentence() } },
@@ -612,7 +614,7 @@ describe("results", () => {
       include: {
         posts: {
           select: {
-            comments: true
+            comments: true,
           },
         },
       },
@@ -637,43 +639,45 @@ describe("results", () => {
       ],
     });
   });
-  
-  it('allows middleware to modify deeply included results in nested select through include action', async () => {
+
+  it("allows middleware to modify deeply included results in nested select through include action", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       const result = await next(params);
       if (!result) return;
 
-      if (params.action === 'include' && params.model === 'Comment') {
+      if (params.action === "include" && params.model === "Comment") {
         return addReturnedDate(result);
       }
 
       return result;
     });
 
-    const next = jest.fn((params) => Promise.resolve({
-      id: faker.datatype.number(),
-      email: params.args.data.email,
+    const next = jest.fn((params) =>
+      Promise.resolve({
+        id: faker.datatype.number(),
+        email: params.args.data.email,
 
-      posts: [
-        {
-          id: faker.datatype.number(),
-          title: params.args.data.posts.create.title,
-          comments: [
-            {
-              id: faker.datatype.number(),
-              content: faker.lorem.sentence(),
-               replies: [
-                {
-                  id: faker.datatype.number(),
-                  content: faker.lorem.sentence(),
-                },
-               ]
-            },
-          ],
-        },
-      ],
-    }));
-    const params = createParams('User', 'create', {
+        posts: [
+          {
+            id: faker.datatype.number(),
+            title: params.args.data.posts.create.title,
+            comments: [
+              {
+                id: faker.datatype.number(),
+                content: faker.lorem.sentence(),
+                replies: [
+                  {
+                    id: faker.datatype.number(),
+                    content: faker.lorem.sentence(),
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    );
+    const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
         posts: { create: { title: faker.lorem.sentence() } },
@@ -683,16 +687,15 @@ describe("results", () => {
           select: {
             comments: {
               include: {
-                replies: true
-              }
-            }
+                replies: true,
+              },
+            },
           },
         },
       },
-
     });
     const result = await nestedMiddleware(params, next);
-    
+
     expect(result).toEqual({
       id: expect.any(Number),
       email: params.args.data.email,
@@ -1021,7 +1024,9 @@ describe("results", () => {
               returned: expect.any(Date),
               author: {
                 id: expect.any(Number),
-                email: params.args.data.comments.create.replies.create.author.create.email,
+                email:
+                  params.args.data.comments.create.replies.create.author.create
+                    .email,
                 returned: expect.any(Date),
               },
             },
