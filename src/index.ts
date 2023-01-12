@@ -198,7 +198,7 @@ function getNestedResult(result: any, relationName: string) {
 
   return result.reduce((acc, item) => {
     const itemResult = get(item, relationName);
-    if (typeof itemResult === "undefined") {
+    if (typeof itemResult !== "object" || itemResult === null) {
       return acc;
     }
 
@@ -238,7 +238,7 @@ function setNestedResult(
     return set(
       item,
       relationName,
-      modifiedResultItem && removeParentFromResult(modifiedResultItem)
+      modifiedResultItem ? removeParentFromResult(modifiedResultItem) : null
     );
   });
 }
