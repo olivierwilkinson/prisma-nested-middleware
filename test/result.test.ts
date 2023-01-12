@@ -16,6 +16,241 @@ function addReturnedDate(result: any) {
 }
 
 describe("results", () => {
+  it("returns correct result by default", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      return next(params);
+    });
+
+    const params = createParams("User", "create", {
+      data: { email: faker.internet.email() },
+    });
+    const next = jest.fn(() =>
+      Promise.resolve({
+        id: faker.datatype.number(),
+        email: params.args.data.email,
+      })
+    );
+    const result = await nestedMiddleware(params, next);
+
+    expect(result).toEqual({
+      id: expect.any(Number),
+      email: params.args.data.email,
+    });
+  });
+
+  it("returns correct result when relations are included", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      return next(params);
+    });
+
+    const params = createParams("Post", "findMany", {
+      where: { title: faker.lorem.sentence() },
+      include: {
+        author: { include: { profile: true, posts: true } },
+        comments: { include: { author: true } },
+      },
+    });
+    const clientResult = [
+      {
+        id: faker.datatype.number(),
+        title: faker.lorem.sentence(),
+        author: {
+          id: faker.datatype.number(),
+          email: faker.internet.email(),
+          profile: null,
+          posts: [
+            {
+              id: faker.datatype.number(),
+              title: faker.lorem.sentence(),
+              comments: [
+                { id: faker.datatype.number(), content: faker.lorem.text() },
+                { id: faker.datatype.number(), content: faker.lorem.text() },
+                { id: faker.datatype.number(), content: faker.lorem.text() },
+              ],
+            },
+            {
+              id: faker.datatype.number(),
+              title: faker.lorem.sentence(),
+              comments: null,
+            },
+          ],
+        },
+        comments: [
+          {
+            id: faker.datatype.number(),
+            content: faker.lorem.paragraph(),
+            author: {
+              id: faker.datatype.number(),
+              email: faker.internet.email(),
+            },
+          },
+          {
+            id: faker.datatype.number(),
+            content: faker.lorem.paragraph(),
+            author: null,
+          },
+        ],
+      },
+      {
+        id: faker.datatype.number(),
+        title: faker.lorem.sentence(),
+        author: null,
+        comments: null,
+      },
+    ];
+    const next = jest.fn(() => Promise.resolve(clientResult));
+    const result = await nestedMiddleware(params, next);
+
+    expect(result).toEqual(clientResult);
+  });
+
+  it("returns correct result when relations are selected", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      return next(params);
+    });
+
+    const params = createParams("Post", "findMany", {
+      where: { title: faker.lorem.sentence() },
+      select: {
+        content: true,
+        author: {
+          select: {
+            email: true,
+            profile: { select: { bio: true } },
+            posts: {
+              select: {
+                title: true,
+                comments: {
+                  select: { content: true },
+                },
+              },
+            },
+          },
+        },
+        comments: {
+          select: { author: true },
+        },
+      },
+    });
+
+    const clientResult = [
+      {
+        title: faker.lorem.sentence(),
+        author: {
+          email: faker.internet.email(),
+          profile: null,
+          posts: [
+            {
+              title: faker.lorem.sentence(),
+              comments: [
+                { content: faker.lorem.text() },
+                { content: faker.lorem.text() },
+                { content: faker.lorem.text() },
+              ],
+            },
+            { title: faker.lorem.sentence(), comments: null },
+          ],
+        },
+        comments: [
+          {
+            author: {
+              id: faker.datatype.number(),
+              email: faker.internet.email(),
+            },
+          },
+          { author: null },
+        ],
+      },
+      {
+        title: faker.lorem.sentence(),
+        author: null,
+        comments: null,
+      },
+    ];
+    const next = jest.fn(() => Promise.resolve(clientResult));
+    const result = await nestedMiddleware(params, next);
+
+    expect(result).toEqual(clientResult);
+  });
+
+  it("returns correct result when relations are included and selected", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      return next(params);
+    });
+
+    const params = createParams("Post", "findMany", {
+      where: { title: faker.lorem.sentence() },
+      include: {
+        author: {
+          select: {
+            email: true,
+            profile: { select: { bio: true } },
+            posts: {
+              include: {
+                comments: true,
+              },
+            },
+          },
+        },
+        comments: {
+          select: { author: true },
+        },
+      },
+    });
+
+    const clientResult = [
+      {
+        id: faker.datatype.number(),
+        title: faker.lorem.sentence(),
+        author: {
+          email: faker.internet.email(),
+          profile: null,
+          posts: [
+            {
+              id: faker.datatype.number(),
+              title: faker.lorem.sentence(),
+              comments: [
+                { content: faker.lorem.text() },
+                { content: faker.lorem.text() },
+                { content: faker.lorem.text() },
+              ],
+            },
+            {
+              id: faker.datatype.number(),
+              title: faker.lorem.sentence(),
+              comments: null,
+            },
+          ],
+        },
+        comments: [
+          {
+            id: faker.datatype.number(),
+            content: faker.lorem.text(),
+            author: {
+              id: faker.datatype.number(),
+              email: faker.internet.email(),
+            },
+          },
+          {
+            id: faker.datatype.number(),
+            content: faker.lorem.text(),
+            author: null,
+          },
+        ],
+      },
+      {
+        id: faker.datatype.number(),
+        title: faker.lorem.sentence(),
+        author: null,
+        comments: null,
+      },
+    ];
+    const next = jest.fn(() => Promise.resolve(clientResult));
+    const result = await nestedMiddleware(params, next);
+
+    expect(result).toEqual(clientResult);
+  });
+
   it("allows middleware to modify root result", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       const result = await next(params);
@@ -340,36 +575,38 @@ describe("results", () => {
       ],
     });
   });
-  
-  it('allows middleware to modify selected in nested include through select action', async () => {
+
+  it("allows middleware to modify selected in nested include through select action", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       const result = await next(params);
       if (!result) return;
 
-      if (params.action === 'select' && params.model === 'Comment') {
+      if (params.action === "select" && params.model === "Comment") {
         return addReturnedDate(result);
       }
 
       return result;
     });
-       
-    const next = jest.fn((params) => Promise.resolve({
-      id: faker.datatype.number(),
-      email: params.args.data.email,
-      posts: [
-        {
-          id: faker.datatype.number(),
-          title: params.args.data.posts.create.title,
-          comments: [
-            {
-              id: faker.datatype.number(),
-              content: faker.lorem.sentence(),
-            },
-          ],
-        },
-      ],
-    }));
-    const params = createParams('User', 'create', {
+
+    const next = jest.fn((params) =>
+      Promise.resolve({
+        id: faker.datatype.number(),
+        email: params.args.data.email,
+        posts: [
+          {
+            id: faker.datatype.number(),
+            title: params.args.data.posts.create.title,
+            comments: [
+              {
+                id: faker.datatype.number(),
+                content: faker.lorem.sentence(),
+              },
+            ],
+          },
+        ],
+      })
+    );
+    const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
         posts: { create: { title: faker.lorem.sentence() } },
@@ -377,7 +614,7 @@ describe("results", () => {
       include: {
         posts: {
           select: {
-            comments: true
+            comments: true,
           },
         },
       },
@@ -402,43 +639,45 @@ describe("results", () => {
       ],
     });
   });
-  
-  it('allows middleware to modify deeply included results in nested select through include action', async () => {
+
+  it("allows middleware to modify deeply included results in nested select through include action", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       const result = await next(params);
       if (!result) return;
 
-      if (params.action === 'include' && params.model === 'Comment') {
+      if (params.action === "include" && params.model === "Comment") {
         return addReturnedDate(result);
       }
 
       return result;
     });
 
-    const next = jest.fn((params) => Promise.resolve({
-      id: faker.datatype.number(),
-      email: params.args.data.email,
+    const next = jest.fn((params) =>
+      Promise.resolve({
+        id: faker.datatype.number(),
+        email: params.args.data.email,
 
-      posts: [
-        {
-          id: faker.datatype.number(),
-          title: params.args.data.posts.create.title,
-          comments: [
-            {
-              id: faker.datatype.number(),
-              content: faker.lorem.sentence(),
-               replies: [
-                {
-                  id: faker.datatype.number(),
-                  content: faker.lorem.sentence(),
-                },
-               ]
-            },
-          ],
-        },
-      ],
-    }));
-    const params = createParams('User', 'create', {
+        posts: [
+          {
+            id: faker.datatype.number(),
+            title: params.args.data.posts.create.title,
+            comments: [
+              {
+                id: faker.datatype.number(),
+                content: faker.lorem.sentence(),
+                replies: [
+                  {
+                    id: faker.datatype.number(),
+                    content: faker.lorem.sentence(),
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    );
+    const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
         posts: { create: { title: faker.lorem.sentence() } },
@@ -448,16 +687,15 @@ describe("results", () => {
           select: {
             comments: {
               include: {
-                replies: true
-              }
-            }
+                replies: true,
+              },
+            },
           },
         },
       },
-
     });
     const result = await nestedMiddleware(params, next);
-    
+
     expect(result).toEqual({
       id: expect.any(Number),
       email: params.args.data.email,
@@ -786,7 +1024,9 @@ describe("results", () => {
               returned: expect.any(Date),
               author: {
                 id: expect.any(Number),
-                email: params.args.data.comments.create.replies.create.author.create.email,
+                email:
+                  params.args.data.comments.create.replies.create.author.create
+                    .email,
                 returned: expect.any(Date),
               },
             },
