@@ -1,6 +1,6 @@
 {
   "name": "prisma-nested-middleware",
-  "version": "1.0.0-semantically-released",
+  "version": "1.1.2-semantically-released",
   "description": "Util for calling Prisma middleware for nested write operations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
