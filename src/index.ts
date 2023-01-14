@@ -118,16 +118,36 @@ function extractNestedWriteOperations(
     nestedWriteOperations.push(
       ...Object.keys(arg)
         .filter(isWriteOperation)
-        .map((operation) => ({
-          argPath,
-          params: {
-            ...params,
-            model,
-            action: operation,
-            args: arg[operation],
-            scope: params,
-          },
-        }))
+        .reduce<NestedOperationInfo[]>((acc, operation) => {
+          if (
+            ["create", "update"].includes(operation) &&
+            Array.isArray(arg[operation])
+          ) {
+            return acc.concat(
+              arg[operation].map((args: any, i: number) => ({
+                argPath: `${argPath}.${i}`,
+                params: {
+                  ...params,
+                  model,
+                  action: operation,
+                  args,
+                  scope: params,
+                },
+              }))
+            );
+          }
+
+          return acc.concat({
+            argPath,
+            params: {
+              ...params,
+              model,
+              action: operation,
+              args: arg[operation],
+              scope: params,
+            },
+          });
+        }, [])
     );
   });
 

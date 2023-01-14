@@ -140,7 +140,12 @@ describe("calls", () => {
         {
           action: "create",
           model: "Post",
-          argsPath: "args.data.posts.create",
+          argsPath: "args.data.posts.create.0",
+        },
+        {
+          action: "create",
+          model: "Post",
+          argsPath: "args.data.posts.create.1",
         },
       ],
     },
@@ -168,7 +173,12 @@ describe("calls", () => {
         {
           action: "create",
           model: "Post",
-          argsPath: "args.data.posts.create",
+          argsPath: "args.data.posts.create.0",
+        },
+        {
+          action: "create",
+          model: "Post",
+          argsPath: "args.data.posts.create.1",
         },
       ],
     },
@@ -200,7 +210,7 @@ describe("calls", () => {
         {
           action: "create",
           model: "Post",
-          argsPath: "args.data.posts.create",
+          argsPath: "args.data.posts.create.0",
         },
       ],
     },
@@ -243,12 +253,22 @@ describe("calls", () => {
         {
           action: "create",
           model: "Post",
-          argsPath: "args.create.posts.create",
+          argsPath: "args.create.posts.create.0",
         },
         {
           action: "create",
           model: "Post",
-          argsPath: "args.update.posts.create",
+          argsPath: "args.create.posts.create.1",
+        },
+        {
+          action: "create",
+          model: "Post",
+          argsPath: "args.update.posts.create.0",
+        },
+        {
+          action: "create",
+          model: "Post",
+          argsPath: "args.update.posts.create.1",
         },
       ],
     },
@@ -320,7 +340,12 @@ describe("calls", () => {
         {
           action: "update",
           model: "Post",
-          argsPath: "args.data.posts.update",
+          argsPath: "args.data.posts.update.0",
+        },
+        {
+          action: "update",
+          model: "Post",
+          argsPath: "args.data.posts.update.1",
         },
       ],
     },
@@ -357,7 +382,12 @@ describe("calls", () => {
         {
           action: "update",
           model: "Post",
-          argsPath: "args.update.posts.update",
+          argsPath: "args.update.posts.update.0",
+        },
+        {
+          action: "update",
+          model: "Post",
+          argsPath: "args.update.posts.update.1",
         },
       ],
     },
@@ -1607,7 +1637,7 @@ describe("calls", () => {
             model: "Post",
             argsPath: "args.include.posts",
           },
-        }
+        },
       ],
     },
     {
