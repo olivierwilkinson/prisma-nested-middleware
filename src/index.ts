@@ -71,12 +71,6 @@ function getNestedWriteArgPaths(
   if (params.action === "upsert") {
     return [`update.${relation.name}`, `create.${relation.name}`];
   }
-
-  // nested create args are not nested under data
-  if (params.action === "create" && params.scope) {
-    return [relation.name];
-  }
-
   if (
     ["create", "update", "updateMany", "createMany"].includes(params.action)
   ) {
@@ -124,7 +118,10 @@ function extractNestedWriteOperations(
             ...params,
             model,
             action: operation,
-            args: arg[operation],
+            args:
+              operation === "create"
+                ? { data: arg[operation] }
+                : arg[operation],
             scope: params,
           },
         }))
@@ -288,7 +285,9 @@ export function createNestedMiddleware<T>(
               isReadOperation(updatedParams.action)
                 ? nestedOperation.argPath
                 : `${nestedOperation.argPath}.${updatedParams.action}`,
-              updatedParams.args
+              updatedParams.action === "create"
+                ? updatedParams.args.data
+                : updatedParams.args
             );
 
             // notify parent middleware that params have been updated

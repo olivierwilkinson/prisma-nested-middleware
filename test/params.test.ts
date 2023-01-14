@@ -75,8 +75,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: faker.datatype.number(),
+            data: {
+              ...params.args.data,
+              number: faker.datatype.number(),
+            },
           },
         });
       }
@@ -118,8 +120,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: faker.datatype.number(),
+            data: {
+              ...params.args.data,
+              number: faker.datatype.number(),
+            },
           },
         });
       }
@@ -474,8 +478,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: faker.datatype.number(),
+            data: {
+              ...params.args.data,
+              number: faker.datatype.number(),
+            },
           },
         });
       }
@@ -485,8 +491,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: faker.datatype.number(),
+            data: {
+              ...params.args.data,
+              number: faker.datatype.number(),
+            },
           },
         });
       }
