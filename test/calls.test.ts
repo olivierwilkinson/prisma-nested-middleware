@@ -140,7 +140,12 @@ describe("calls", () => {
         {
           action: "create",
           model: "Post",
-          argsPath: "args.data.posts.create",
+          argsPath: "args.data.posts.create.0",
+        },
+        {
+          action: "create",
+          model: "Post",
+          argsPath: "args.data.posts.create.1",
         },
       ],
     },
@@ -168,7 +173,12 @@ describe("calls", () => {
         {
           action: "create",
           model: "Post",
-          argsPath: "args.data.posts.create",
+          argsPath: "args.data.posts.create.0",
+        },
+        {
+          action: "create",
+          model: "Post",
+          argsPath: "args.data.posts.create.1",
         },
       ],
     },
@@ -200,7 +210,7 @@ describe("calls", () => {
         {
           action: "create",
           model: "Post",
-          argsPath: "args.data.posts.create",
+          argsPath: "args.data.posts.create.0",
         },
       ],
     },
@@ -243,12 +253,22 @@ describe("calls", () => {
         {
           action: "create",
           model: "Post",
-          argsPath: "args.create.posts.create",
+          argsPath: "args.create.posts.create.0",
         },
         {
           action: "create",
           model: "Post",
-          argsPath: "args.update.posts.create",
+          argsPath: "args.create.posts.create.1",
+        },
+        {
+          action: "create",
+          model: "Post",
+          argsPath: "args.update.posts.create.0",
+        },
+        {
+          action: "create",
+          model: "Post",
+          argsPath: "args.update.posts.create.1",
         },
       ],
     },
@@ -320,7 +340,12 @@ describe("calls", () => {
         {
           action: "update",
           model: "Post",
-          argsPath: "args.data.posts.update",
+          argsPath: "args.data.posts.update.0",
+        },
+        {
+          action: "update",
+          model: "Post",
+          argsPath: "args.data.posts.update.1",
         },
       ],
     },
@@ -357,7 +382,12 @@ describe("calls", () => {
         {
           action: "update",
           model: "Post",
-          argsPath: "args.update.posts.update",
+          argsPath: "args.update.posts.update.0",
+        },
+        {
+          action: "update",
+          model: "Post",
+          argsPath: "args.update.posts.update.1",
         },
       ],
     },
@@ -392,7 +422,6 @@ describe("calls", () => {
         },
         update: {
           email: faker.internet.email(),
-
           profile: {
             upsert: {
               create: { bio: faker.lorem.paragraph() },
@@ -433,7 +462,6 @@ describe("calls", () => {
         create: {
           email: faker.internet.email(),
         },
-
         update: {
           email: faker.internet.email(),
           profile: { delete: true },
@@ -465,8 +493,13 @@ describe("calls", () => {
         {
           action: "delete",
           model: "Post",
-          argsPath: "args.data.posts.delete",
+          argsPath: "args.data.posts.delete.0",
         },
+        {
+          action: "delete",
+          model: "Post",
+          argsPath: "args.data.posts.delete.1",
+        }
       ],
     },
     {
@@ -490,8 +523,13 @@ describe("calls", () => {
         {
           action: "delete",
           model: "Post",
-          argsPath: "args.update.posts.delete",
+          argsPath: "args.update.posts.delete.0",
         },
+        {
+          action: "delete",
+          model: "Post",
+          argsPath: "args.update.posts.delete.1",
+        }
       ],
     },
     {
@@ -676,7 +714,6 @@ describe("calls", () => {
         {
           action: "deleteMany",
           model: "Post",
-
           argsPath: "args.update.posts.deleteMany",
         },
       ],
@@ -841,7 +878,17 @@ describe("calls", () => {
         {
           action: "delete",
           model: "Comment",
-          argsPath: "args.data.posts.update.data.comments.delete",
+          argsPath: "args.data.posts.update.data.comments.delete.0",
+          scope: {
+            action: "update",
+            model: "Post",
+            argsPath: "args.data.posts.update",
+          },
+        },
+        {
+          action: "delete",
+          model: "Comment",
+          argsPath: "args.data.posts.update.data.comments.delete.1",
           scope: {
             action: "update",
             model: "Post",
@@ -988,7 +1035,6 @@ describe("calls", () => {
           scope: {
             action: "update",
             model: "Post",
-
             argsPath: "args.data.posts.update",
           },
         },
@@ -1023,7 +1069,6 @@ describe("calls", () => {
         {
           action: "deleteMany",
           model: "Comment",
-
           argsPath: "args.data.posts.update.data.comments.deleteMany",
           scope: {
             action: "update",
@@ -1246,12 +1291,10 @@ describe("calls", () => {
           action: "include",
           model: "Comment",
           argsPath: "args.include.posts.include.comments.include.replies",
-
           scope: {
             action: "include",
             model: "Comment",
             argsPath: "args.include.posts.include.comments",
-
             scope: {
               action: "include",
               model: "Post",
