@@ -29,8 +29,14 @@ function nestedParamsFromCall<Model extends Prisma.ModelName>(
   rootParams: Prisma.MiddlewareParams,
   call: MiddlewareCall<Model>
 ): NestedParams {
+  const args = get(rootParams, call.argsPath);
+  const params = createParams(
+    call.model,
+    call.action,
+    call.action === "create" ? { data: args } : args
+  );
   return {
-    ...createParams(call.model, call.action, get(rootParams, call.argsPath)),
+    ...params,
     scope: call.scope
       ? nestedParamsFromCall(rootParams, call.scope)
       : rootParams,
@@ -499,7 +505,7 @@ describe("calls", () => {
           action: "delete",
           model: "Post",
           argsPath: "args.data.posts.delete.1",
-        }
+        },
       ],
     },
     {
@@ -529,7 +535,7 @@ describe("calls", () => {
           action: "delete",
           model: "Post",
           argsPath: "args.update.posts.delete.1",
-        }
+        },
       ],
     },
     {
@@ -1650,7 +1656,7 @@ describe("calls", () => {
             model: "Post",
             argsPath: "args.include.posts",
           },
-        }
+        },
       ],
     },
     {
