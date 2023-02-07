@@ -59,7 +59,6 @@ There are some differences to note when using nested middleware:
 
 - the list of actions that might be in params is expanded to include `connectOrCreate`, `include` and `select`.
 - The parent operation's params have been added to the params of nested middleware as a `scope` object. This is useful when the parent is relevant, for example when handling a `connectOrCreate` and you need to know the parent being connected to.
-- when handling a nested `create` action `params.args` does not include a `data` field, that must be handled manually. You can use the existence of `params.scope` to know when to handle a nested `create`.
 - the return value of `next` matches the part of the response that the middleware was called for. For example if the middleware function is called for a nested create, the `next` function resolves with the value of that create.
 - if a relation is not included using `include` then that middleware's `next` function will resolve with `undefined`.
 - if a nested operation's result is within an array then the nested operation's `next` function returns a flattened array of all the models found in the parent array. See [Operations Nested in Lists](#operations-nested-in-lists) for more information.
