@@ -56,10 +56,6 @@ const writeOperations: NestedAction[] = [
   "deleteMany",
 ];
 
-function isReadOperation(key: any): key is NestedReadAction {
-  return readOperations.includes(key);
-}
-
 function isWriteOperation(key: any): key is NestedAction {
   return writeOperations.includes(key);
 }
@@ -115,11 +111,32 @@ function extractNestedWriteOperations(
 
   getNestedWriteArgPaths(params, relation).forEach((argPath) => {
     const arg = get(params.args, argPath, {});
-    nestedWriteOperations.push(
-      ...Object.keys(arg)
-        .filter(isWriteOperation)
-        .map((operation) => ({
-          argPath,
+
+    Object.keys(arg)
+      .filter(isWriteOperation)
+      .forEach((operation) => {
+        // add single writes passed as a list as seperate operations
+        if (
+          ["create", "update", "delete"].includes(operation) &&
+          Array.isArray(arg[operation])
+        ) {
+          nestedWriteOperations.push(
+            ...arg[operation].map((item: any, index: number) => ({
+              argPath: `${argPath}.${operation}.${index}`,
+              params: {
+                ...params,
+                model,
+                action: operation,
+                args: item,
+                scope: params,
+              },
+            }))
+          );
+          return;
+        }
+
+        nestedWriteOperations.push({
+          argPath: `${argPath}.${operation}`,
           params: {
             ...params,
             model,
@@ -127,8 +144,8 @@ function extractNestedWriteOperations(
             args: arg[operation],
             scope: params,
           },
-        }))
-    );
+        });
+      });
   });
 
   return nestedWriteOperations;
@@ -284,10 +301,7 @@ export function createNestedMiddleware<T>(
             // Scope updates to [argPath].[action] to avoid breaking params
             set(
               finalParams.args,
-              // no nested action in read operations
-              isReadOperation(updatedParams.action)
-                ? nestedOperation.argPath
-                : `${nestedOperation.argPath}.${updatedParams.action}`,
+              nestedOperation.argPath,
               updatedParams.args
             );
 

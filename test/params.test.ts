@@ -154,6 +154,345 @@ describe("params", () => {
     });
   });
 
+  it("allows middleware to modify nested create list params", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.model === "Post") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            number: params.args.title === "first" ? 1 : 2,
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+        posts: {
+          create: [{ title: "first" }, { title: "second" }],
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          posts: {
+            create: [
+              { title: "first", number: 1 },
+              { title: "second", number: 2 },
+            ],
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify nested update list params", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.model === "Post") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            data: {
+              ...params.args.data,
+              number: params.args.data.title === "first" ? 1 : 2,
+            },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "update", {
+      where: { id: faker.datatype.number() },
+      data: {
+        email: faker.internet.email(),
+        posts: {
+          update: [
+            {
+              where: { id: faker.datatype.number() },
+              data: { title: "first" },
+            },
+            {
+              where: { id: faker.datatype.number() },
+              data: { title: "second" },
+            },
+          ],
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          posts: {
+            update: [
+              {
+                where: params.args.data.posts.update[0].where,
+                data: { title: "first", number: 1 },
+              },
+              {
+                where: params.args.data.posts.update[1].where,
+                data: { title: "second", number: 2 },
+              },
+            ],
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify nested delete list params", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "delete" && params.model === "Post") {
+        return next({
+          ...params,
+          args: { id: params.args.id + 1 },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "update", {
+      where: { id: faker.datatype.number() },
+      data: {
+        email: faker.internet.email(),
+        posts: {
+          delete: [{ id: 1 }, { id: 2 }],
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          posts: {
+            delete: [{ id: 2 }, { id: 3 }],
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify params of operations nested in list", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "create" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            number: params.args.content === "first post comment" ? 1 : 2,
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams("User", "update", {
+      where: { id: faker.datatype.number() },
+      data: {
+        email: faker.internet.email(),
+        posts: {
+          update: [
+            {
+              where: { id: faker.datatype.number() },
+              data: {
+                title: "first",
+                comments: {
+                  create: {
+                    content: "first post comment",
+                    authorId: faker.datatype.number(),
+                  },
+                },
+              },
+            },
+            {
+              where: { id: faker.datatype.number() },
+              data: {
+                title: "second",
+                comments: {
+                  create: {
+                    content: "second post comment",
+                    authorId: faker.datatype.number(),
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          posts: {
+            update: [
+              {
+                where: params.args.data.posts.update[0].where,
+                data: {
+                  title: "first",
+                  comments: {
+                    create: {
+                      content: "first post comment",
+                      authorId: expect.any(Number),
+                      number: 1,
+                    },
+                  },
+                },
+              },
+              {
+                where: params.args.data.posts.update[1].where,
+                data: {
+                  title: "second",
+                  comments: {
+                    create: {
+                      content: "second post comment",
+                      authorId: expect.any(Number),
+                      number: 2,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+  });
+  
+  it('allows middleware to modify params of deeply nested lists of create operations', async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === 'create' && params.model === 'Comment') {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            number: params.args.content === 'first post comment' ? 1 : 2,
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((params: any) => params);
+    const params = createParams('User', 'update', {
+      where: { id: faker.datatype.number() },
+      data: {
+        email: faker.internet.email(),
+        posts: {
+          create: [
+            {
+              title: 'first',
+              comments: {
+                create: [
+                  {
+                    content: 'first post comment',
+                    authorId: faker.datatype.number(),
+                  },
+                  {
+                    content: 'second post comment',
+                    authorId: faker.datatype.number(),
+                  },
+                ],
+              },
+            },
+            {
+              title: 'second',
+              comments: {
+                create: [
+                  {
+                    content: 'first post comment',
+                    authorId: faker.datatype.number(),
+                  },
+                  {
+                    content: 'second post comment',
+                    authorId: faker.datatype.number(),
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          posts: {
+            create: [
+              {
+                title: 'first',
+                comments: {
+                  create: [
+                    {
+                      content: 'first post comment',
+                      authorId: expect.any(Number),
+                      number: 1,
+                    },
+                    {
+                      content: 'second post comment',
+                      authorId: expect.any(Number),
+                      number: 2,
+                    },
+                  ],
+                },
+              },
+              {
+                title: 'second',
+                comments: {
+                  create: [
+                    {
+                      content: 'first post comment',
+                      authorId: expect.any(Number),
+                      number: 1,
+                    },
+                    {
+                      content: 'second post comment',
+                      authorId: expect.any(Number),
+                      number: 2,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+  });
+
   it("allows middleware to modify include params", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "create" && params.model === "User") {
