@@ -75,8 +75,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: faker.datatype.number(),
+            data: {
+              ...params.args.data,
+              number: faker.datatype.number(),
+            },
           },
         });
       }
@@ -118,8 +120,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: faker.datatype.number(),
+            data: {
+              ...params.args.data,
+              number: faker.datatype.number(),
+            },
           },
         });
       }
@@ -160,8 +164,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: params.args.title === "first" ? 1 : 2,
+            data: {
+              ...params.args.data,
+              number: params.args.data.title === "first" ? 1 : 2,
+            },
           },
         });
       }
@@ -300,8 +306,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: params.args.content === "first post comment" ? 1 : 2,
+            data: {
+              ...params.args.data,
+              number: params.args.data.content === "first post comment" ? 1 : 2,
+            },
           },
         });
       }
@@ -385,15 +393,17 @@ describe("params", () => {
       },
     });
   });
-  
-  it('allows middleware to modify params of deeply nested lists of create operations', async () => {
+
+  it("allows middleware to modify params of deeply nested lists of create operations", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
-      if (params.action === 'create' && params.model === 'Comment') {
+      if (params.action === "create" && params.model === "Comment") {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: params.args.content === 'first post comment' ? 1 : 2,
+            data: {
+              ...params.args.data,
+              number: params.args.data.content === "first post comment" ? 1 : 2,
+            },
           },
         });
       }
@@ -401,37 +411,37 @@ describe("params", () => {
     });
 
     const next = jest.fn((params: any) => params);
-    const params = createParams('User', 'update', {
+    const params = createParams("User", "update", {
       where: { id: faker.datatype.number() },
       data: {
         email: faker.internet.email(),
         posts: {
           create: [
             {
-              title: 'first',
+              title: "first",
               comments: {
                 create: [
                   {
-                    content: 'first post comment',
+                    content: "first post comment",
                     authorId: faker.datatype.number(),
                   },
                   {
-                    content: 'second post comment',
+                    content: "second post comment",
                     authorId: faker.datatype.number(),
                   },
                 ],
               },
             },
             {
-              title: 'second',
+              title: "second",
               comments: {
                 create: [
                   {
-                    content: 'first post comment',
+                    content: "first post comment",
                     authorId: faker.datatype.number(),
                   },
                   {
-                    content: 'second post comment',
+                    content: "second post comment",
                     authorId: faker.datatype.number(),
                   },
                 ],
@@ -452,16 +462,16 @@ describe("params", () => {
           posts: {
             create: [
               {
-                title: 'first',
+                title: "first",
                 comments: {
                   create: [
                     {
-                      content: 'first post comment',
+                      content: "first post comment",
                       authorId: expect.any(Number),
                       number: 1,
                     },
                     {
-                      content: 'second post comment',
+                      content: "second post comment",
                       authorId: expect.any(Number),
                       number: 2,
                     },
@@ -469,16 +479,16 @@ describe("params", () => {
                 },
               },
               {
-                title: 'second',
+                title: "second",
                 comments: {
                   create: [
                     {
-                      content: 'first post comment',
+                      content: "first post comment",
                       authorId: expect.any(Number),
                       number: 1,
                     },
                     {
-                      content: 'second post comment',
+                      content: "second post comment",
                       authorId: expect.any(Number),
                       number: 2,
                     },
@@ -490,7 +500,6 @@ describe("params", () => {
         },
       },
     });
-
   });
 
   it("allows middleware to modify include params", async () => {
@@ -813,8 +822,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: faker.datatype.number(),
+            data: {
+              ...params.args.data,
+              number: faker.datatype.number(),
+            },
           },
         });
       }
@@ -824,8 +835,10 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            ...params.args,
-            number: faker.datatype.number(),
+            data: {
+              ...params.args.data,
+              number: faker.datatype.number(),
+            },
           },
         });
       }
