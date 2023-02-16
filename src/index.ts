@@ -110,11 +110,15 @@ function extractNestedWriteOperations(
     Object.keys(arg)
       .filter(isWriteOperation)
       .forEach((operation) => {
-        // add single writes passed as a list as separate operations
-        if (
-          ["create", "update", "delete"].includes(operation) &&
-          Array.isArray(arg[operation])
-        ) {
+        /*
+          Add single writes passed as a list as separate operations.
+
+          Checking if the operation is an array is enough since only lists of
+          separate operations are passed as arrays at the top level. For example
+          a nested create may be passed as an array but a nested createMany will
+          pass an object with a data array.
+        */
+        if (Array.isArray(arg[operation])) {
           nestedWriteOperations.push(
             ...arg[operation].map((item: any, index: number) => ({
               argPath: `${argPath}.${operation}.${index}`,

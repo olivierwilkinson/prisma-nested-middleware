@@ -420,6 +420,47 @@ describe("calls", () => {
       ],
     },
     {
+      description: "nested upsert list in update",
+      rootParams: createParams("User", "update", {
+        where: { id: faker.datatype.number() },
+        data: {
+          email: faker.internet.email(),
+          posts: {
+            upsert: [
+              {
+                where: { id: faker.datatype.number() },
+                update: { title: faker.lorem.sentence() },
+                create: {
+                  title: faker.lorem.sentence(),
+                  content: faker.lorem.paragraph(),
+                },
+              },
+              {
+                where: { id: faker.datatype.number() },
+                update: { title: faker.lorem.sentence() },
+                create: {
+                  title: faker.lorem.sentence(),
+                  content: faker.lorem.paragraph(),
+                },
+              },
+            ],
+          },
+        },
+      }),
+      calls: [
+        {
+          action: "upsert",
+          model: "Post",
+          argsPath: "args.data.posts.upsert.0",
+        },
+        {
+          action: "upsert",
+          model: "Post",
+          argsPath: "args.data.posts.upsert.1",
+        },
+      ],
+    },
+    {
       description: "nested upsert in upsert",
       rootParams: createParams("User", "upsert", {
         where: { id: faker.datatype.number() },
@@ -655,6 +696,50 @@ describe("calls", () => {
         },
       ],
     },
+
+    {
+      description: "nested updateMany array in update",
+      rootParams: createParams("User", "update", {
+        where: { id: faker.datatype.number() },
+        data: {
+          email: faker.internet.email(),
+          posts: {
+            updateMany: [
+              {
+                where: {
+                  id: faker.datatype.number(),
+                },
+                data: {
+                  title: faker.lorem.sentence(),
+                  content: faker.lorem.paragraph(),
+                },
+              },
+              {
+                where: {
+                  id: faker.datatype.number(),
+                },
+                data: {
+                  title: faker.lorem.sentence(),
+                  content: faker.lorem.paragraph(),
+                },
+              },
+            ],
+          },
+        },
+      }),
+      calls: [
+        {
+          action: "updateMany",
+          model: "Post",
+          argsPath: "args.data.posts.updateMany.0",
+        },
+        {
+          action: "updateMany",
+          model: "Post",
+          argsPath: "args.data.posts.updateMany.1",
+        },
+      ],
+    },
     {
       description: "nested updateMany in upsert",
       rootParams: createParams("User", "upsert", {
@@ -684,6 +769,42 @@ describe("calls", () => {
       ],
     },
     {
+      description: "nested updateMany list in upsert",
+      rootParams: createParams("User", "upsert", {
+        where: { id: faker.datatype.number() },
+        create: {
+          email: faker.internet.email(),
+        },
+        update: {
+          email: faker.internet.email(),
+          posts: {
+            updateMany: [
+              {
+                where: { id: faker.datatype.number() },
+                data: { title: faker.lorem.sentence() },
+              },
+              {
+                where: { id: faker.datatype.number() },
+                data: { title: faker.lorem.sentence() },
+              },
+            ],
+          },
+        },
+      }),
+      calls: [
+        {
+          action: "updateMany",
+          model: "Post",
+          argsPath: "args.update.posts.updateMany.0",
+        },
+        {
+          action: "updateMany",
+          model: "Post",
+          argsPath: "args.update.posts.updateMany.1",
+        },
+      ],
+    },
+    {
       description: "nested deleteMany in update",
       rootParams: createParams("User", "update", {
         where: { id: faker.datatype.number() },
@@ -699,6 +820,33 @@ describe("calls", () => {
           action: "deleteMany",
           model: "Post",
           argsPath: "args.data.posts.deleteMany",
+        },
+      ],
+    },
+    {
+      description: "nested deleteMany list in update",
+      rootParams: createParams("User", "update", {
+        where: { id: faker.datatype.number() },
+        data: {
+          email: faker.internet.email(),
+          posts: {
+            deleteMany: [
+              { id: faker.datatype.number() },
+              { id: faker.datatype.number() },
+            ],
+          },
+        },
+      }),
+      calls: [
+        {
+          action: "deleteMany",
+          model: "Post",
+          argsPath: "args.data.posts.deleteMany.0",
+        },
+        {
+          action: "deleteMany",
+          model: "Post",
+          argsPath: "args.data.posts.deleteMany.1",
         },
       ],
     },
@@ -721,6 +869,36 @@ describe("calls", () => {
           action: "deleteMany",
           model: "Post",
           argsPath: "args.update.posts.deleteMany",
+        },
+      ],
+    },
+    {
+      description: "nested deleteMany list in upsert",
+      rootParams: createParams("User", "upsert", {
+        where: { id: faker.datatype.number() },
+        create: {
+          email: faker.internet.email(),
+        },
+        update: {
+          email: faker.internet.email(),
+          posts: {
+            deleteMany: [
+              { id: faker.datatype.number() },
+              { id: faker.datatype.number() },
+            ],
+          },
+        },
+      }),
+      calls: [
+        {
+          action: "deleteMany",
+          model: "Post",
+          argsPath: "args.update.posts.deleteMany.0",
+        },
+        {
+          action: "deleteMany",
+          model: "Post",
+          argsPath: "args.update.posts.deleteMany.1",
         },
       ],
     },
@@ -1047,6 +1225,63 @@ describe("calls", () => {
       ],
     },
     {
+      description: "deeply nested updateMany array",
+      rootParams: createParams("User", "update", {
+        where: { id: faker.datatype.number() },
+        data: {
+          email: faker.internet.email(),
+          posts: {
+            update: {
+              where: { id: faker.datatype.number() },
+              data: {
+                title: faker.lorem.sentence(),
+                content: faker.lorem.paragraph(),
+                comments: {
+                  updateMany: [
+                    {
+                      where: { id: faker.datatype.number() },
+                      data: { content: faker.lorem.paragraph() },
+                    },
+                    {
+                      where: { id: faker.datatype.number() },
+                      data: { content: faker.lorem.paragraph() },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      }),
+      calls: [
+        {
+          action: "update",
+          model: "Post",
+          argsPath: "args.data.posts.update",
+        },
+        {
+          action: "updateMany",
+          model: "Comment",
+          argsPath: "args.data.posts.update.data.comments.updateMany.0",
+          scope: {
+            action: "update",
+            model: "Post",
+            argsPath: "args.data.posts.update",
+          },
+        },
+        {
+          action: "updateMany",
+          model: "Comment",
+          argsPath: "args.data.posts.update.data.comments.updateMany.1",
+          scope: {
+            action: "update",
+            model: "Post",
+            argsPath: "args.data.posts.update",
+          },
+        },
+      ],
+    },
+    {
       description: "deeply nested deleteMany",
       rootParams: createParams("User", "update", {
         where: { id: faker.datatype.number() },
@@ -1076,6 +1311,57 @@ describe("calls", () => {
           action: "deleteMany",
           model: "Comment",
           argsPath: "args.data.posts.update.data.comments.deleteMany",
+          scope: {
+            action: "update",
+            model: "Post",
+            argsPath: "args.data.posts.update",
+          },
+        },
+      ],
+    },
+    {
+      description: "deeply nested deleteMany array",
+      rootParams: createParams("User", "update", {
+        where: { id: faker.datatype.number() },
+        data: {
+          email: faker.internet.email(),
+          posts: {
+            update: {
+              where: { id: faker.datatype.number() },
+              data: {
+                title: faker.lorem.sentence(),
+                content: faker.lorem.paragraph(),
+                comments: {
+                  deleteMany: [
+                    { id: faker.datatype.number() },
+                    { id: faker.datatype.number() },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      }),
+      calls: [
+        {
+          action: "update",
+          model: "Post",
+          argsPath: "args.data.posts.update",
+        },
+        {
+          action: "deleteMany",
+          model: "Comment",
+          argsPath: "args.data.posts.update.data.comments.deleteMany.0",
+          scope: {
+            action: "update",
+            model: "Post",
+            argsPath: "args.data.posts.update",
+          },
+        },
+        {
+          action: "deleteMany",
+          model: "Comment",
+          argsPath: "args.data.posts.update.data.comments.deleteMany.1",
           scope: {
             action: "update",
             model: "Post",
