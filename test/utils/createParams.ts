@@ -41,10 +41,12 @@ type ArgsByAction<
   ? Parameters<DelegateByModel<Model>["upsert"]>[0]
   : Action extends "delete"
   ? Parameters<DelegateByModel<Model>["delete"]>[0]
-  : Action extends "deleteMany"
-  ? Parameters<DelegateByModel<Model>["deleteMany"]>[0]
+  : Action extends "createMany"
+  ? Parameters<DelegateByModel<Model>["createMany"]>[0]
   : Action extends "updateMany"
   ? Parameters<DelegateByModel<Model>["updateMany"]>[0]
+  : Action extends "deleteMany"
+  ? Parameters<DelegateByModel<Model>["deleteMany"]>[0]
   : Action extends "findUnique"
   ? Parameters<DelegateByModel<Model>["findUnique"]>[0]
   : Action extends "findFirst"
