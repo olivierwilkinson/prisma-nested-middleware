@@ -16,7 +16,7 @@ describe("errors", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = (_: any) => Promise.resolve({});
     const params = createParams("User", "create", {
       data: { email: faker.internet.email() },
     });
@@ -31,7 +31,7 @@ describe("errors", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = (_: any) => Promise.resolve({});
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -71,7 +71,7 @@ describe("errors", () => {
       return result;
     });
 
-    const next = jest.fn((params) => params);
+    const next = (_: any) => Promise.resolve({});
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -90,7 +90,7 @@ describe("errors", () => {
       return result;
     });
 
-    const next = jest.fn((params) => params);
+    const next = (_: any) => Promise.resolve({});
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),

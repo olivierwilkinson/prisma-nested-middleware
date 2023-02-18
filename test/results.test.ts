@@ -15,7 +15,7 @@ function addReturnedDate(result: any) {
   return { ...result, returned };
 }
 
-describe("results", () => {
+describe("modifying results", () => {
   it("returns correct result by default", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       return next(params);

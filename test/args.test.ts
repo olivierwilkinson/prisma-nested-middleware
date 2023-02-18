@@ -5,7 +5,7 @@ import { createParams } from "./utils/createParams";
 import { wait } from "./utils/wait";
 
 describe("params", () => {
-  it("allows middleware to modify root params", async () => {
+  it("allows middleware to modify root args", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       return next({
         ...params,
@@ -19,7 +19,7 @@ describe("params", () => {
       });
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: { email: faker.internet.email() },
     });
@@ -37,7 +37,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify root params asynchronously", async () => {
+  it("allows middleware to modify root args asynchronously", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       return next({
         ...params,
@@ -51,7 +51,7 @@ describe("params", () => {
       });
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: { email: faker.internet.email() },
     });
@@ -69,7 +69,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify nested params", async () => {
+  it("allows middleware to modify nested args", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.model === "Post") {
         return next({
@@ -85,7 +85,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -113,7 +113,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify nested params asynchronously", async () => {
+  it("allows middleware to modify nested args asynchronously", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       if (params.model === "Post") {
         await wait(100);
@@ -130,7 +130,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -158,7 +158,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify nested create list params", async () => {
+  it("allows middleware to modify nested create list args", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.model === "Post") {
         return next({
@@ -174,7 +174,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -202,7 +202,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify nested update list params", async () => {
+  it("allows middleware to modify nested update list args", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.model === "Post") {
         return next({
@@ -219,7 +219,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "update", {
       where: { id: faker.datatype.number() },
       data: {
@@ -263,7 +263,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify nested delete list params", async () => {
+  it("allows middleware to modify nested delete list args", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "delete" && params.model === "Post") {
         return next({
@@ -274,7 +274,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "update", {
       where: { id: faker.datatype.number() },
       data: {
@@ -300,7 +300,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify params of operations nested in list", async () => {
+  it("allows middleware to modify args of operations nested in list", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "create" && params.model === "Comment") {
         return next({
@@ -316,7 +316,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "update", {
       where: { id: faker.datatype.number() },
       data: {
@@ -394,7 +394,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify params of deeply nested lists of create operations", async () => {
+  it("allows middleware to modify args of deeply nested lists of create operations", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "create" && params.model === "Comment") {
         return next({
@@ -410,7 +410,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "update", {
       where: { id: faker.datatype.number() },
       data: {
@@ -502,7 +502,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify include params", async () => {
+  it("allows middleware to modify include args", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "create" && params.model === "User") {
         return next({
@@ -522,7 +522,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -548,7 +548,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify include params through include actions", async () => {
+  it("allows middleware to modify include args through include actions", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "include" && params.model === "Post") {
         return next({
@@ -563,7 +563,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -594,7 +594,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify deeply nested include params through include action", async () => {
+  it("allows middleware to modify deeply nested include args through include action", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "include" && params.model === "Comment") {
         if (params.args.skip) {
@@ -611,7 +611,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -651,7 +651,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify select params", async () => {
+  it("allows middleware to modify select args", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "create" && params.model === "User") {
         return next({
@@ -672,7 +672,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -697,7 +697,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify select params through select action", async () => {
+  it("allows middleware to modify select args through select action", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "select" && params.model === "Post") {
         return next({
@@ -718,7 +718,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -754,7 +754,7 @@ describe("params", () => {
     });
   });
 
-  it("allows middleware to modify deeply nested select params through select action", async () => {
+  it("allows middleware to modify deeply nested select args through select action", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "select" && params.model === "Comment") {
         return next({
@@ -773,7 +773,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
@@ -815,7 +815,218 @@ describe("params", () => {
     });
   });
 
-  it("waits for all middleware to finish before calling next", async () => {
+  it("allows middleware to add data to nested createMany args", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "createMany") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            data: [
+              ...params.args.data.map((data: any) => ({
+                ...data,
+                number: faker.datatype.number(),
+              })),
+              {
+                content: faker.lorem.sentence(),
+                number: faker.datatype.number(),
+              },
+            ],
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+        comments: {
+          createMany: { data: [{ content: faker.lorem.sentence() }] },
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          comments: {
+            createMany: {
+              data: [
+                {
+                  content: params.args.data.comments.createMany.data[0].content,
+                  number: expect.any(Number),
+                },
+                { content: expect.any(String), number: expect.any(Number) },
+              ],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("allows user to reorder nested createMany args", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "createMany") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            data: [...params.args.data].reverse(),
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+        comments: {
+          createMany: {
+            data: [{ content: "first" }, { content: "second" }],
+          },
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          comments: {
+            createMany: {
+              data: [{ content: "second" }, { content: "first" }],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("allows user to add data to nested createMany args", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "createMany") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            data: [
+              ...params.args.data.map((data: any) => ({
+                ...data,
+                number: faker.datatype.number(),
+              })),
+              {
+                content: faker.lorem.sentence(),
+                number: faker.datatype.number(),
+              },
+            ],
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+        comments: {
+          createMany: { data: [{ content: faker.lorem.sentence() }] },
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          comments: {
+            createMany: {
+              data: [
+                {
+                  content: params.args.data.comments.createMany.data[0].content,
+                  number: expect.any(Number),
+                },
+                { content: expect.any(String), number: expect.any(Number) },
+              ],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("allows user to remove data from nested createMany args", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "createMany") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            data: [
+              { ...params.args.data[0], number: faker.datatype.number() },
+              { number: faker.datatype.number() },
+            ],
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+        comments: {
+          createMany: {
+            data: [
+              { content: faker.lorem.sentence() },
+              { content: faker.lorem.sentence() },
+              { content: faker.lorem.sentence() },
+            ],
+          },
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          comments: {
+            createMany: {
+              data: [
+                {
+                  content: params.args.data.comments.createMany.data[0].content,
+                  number: expect.any(Number),
+                },
+                { number: expect.any(Number) },
+              ],
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("waits for all middleware to finish before calling next when modifying args", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       if (params.model === "Post") {
         await wait(100);
@@ -846,7 +1057,7 @@ describe("params", () => {
       return next(params);
     });
 
-    const next = jest.fn((params: any) => params);
+    const next = jest.fn((_: any) => Promise.resolve(null));
     const params = createParams("User", "create", {
       data: {
         email: faker.internet.email(),
