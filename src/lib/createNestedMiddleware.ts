@@ -12,7 +12,7 @@ if (!Prisma.dmmf) {
   );
 }
 
-const relationsByModel: Record<string, Prisma.DMMF.Field[]> = {};
+export const relationsByModel: Record<string, Prisma.DMMF.Field[]> = {};
 Prisma.dmmf.datamodel.models.forEach((model: Prisma.DMMF.Model) => {
   relationsByModel[model.name] = model.fields.filter(
     (field) => field.kind === "object" && field.relationName
