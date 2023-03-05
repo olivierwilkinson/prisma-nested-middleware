@@ -1,12 +1,18 @@
 import { Prisma } from "@prisma/client";
 import { DeferredPromise } from "@open-draft/deferred-promise";
 
+export type Modifier = "is" | "isNot" | "some" | "none" | "every";
+export type LogicalOperator = "AND" | "OR" | "NOT";
+
+export type NestedQueryAction = "where";
 export type NestedReadAction = "include" | "select";
 export type NestedWriteAction =
   | "create"
   | "update"
   | "upsert"
   | "connectOrCreate"
+  | "connect"
+  | "disconnect"
   | "createMany"
   | "updateMany"
   | "delete"
@@ -16,22 +22,33 @@ export type NestedAction =
   | Prisma.PrismaAction
   | NestedWriteAction
   | NestedReadAction
-  | "connectOrCreate";
+  | NestedQueryAction;
+
+export type QueryTarget = {
+  action: NestedQueryAction;
+  relationName?: string;
+  modifier?: Modifier;
+  operations?: { logicalOperator: LogicalOperator; index?: number }[];
+  readAction?: NestedReadAction;
+  parentTarget?: Target;
+};
 
 export type ReadTarget = {
   action: NestedReadAction;
-  relationName: string;
+  relationName?: string;
   field?: string;
+  parentTarget?: Target;
 };
 
 export type WriteTarget = {
   action: NestedWriteAction;
   relationName: string;
-  field: string;
+  field?: string;
   index?: number;
+  parentTarget?: Target;
 };
 
-export type Target = ReadTarget | WriteTarget;
+export type Target = ReadTarget | WriteTarget | QueryTarget;
 
 export type MiddlewareCall = {
   nextPromise: DeferredPromise<any>;
@@ -41,13 +58,19 @@ export type MiddlewareCall = {
   target: Target;
 };
 
+export type Scope = {
+  parentParams: NestedParams;
+  relations: { to: Prisma.DMMF.Field; from: Prisma.DMMF.Field };
+  modifier?: Modifier;
+  logicalOperators?: LogicalOperator[];
+};
+
 export type NestedParams = Omit<Prisma.MiddlewareParams, "action"> & {
   action: NestedAction;
-  scope?: NestedParams;
-  relation?: Prisma.DMMF.Field;
+  scope?: Scope;
 };
 
 export type NestedMiddleware<T = any> = (
   params: NestedParams,
-  next: (modifiedParams: NestedParams) => Promise<T>
+  next: (modifiedParams: NestedParams | NestedParams[]) => Promise<T>
 ) => Promise<T>;

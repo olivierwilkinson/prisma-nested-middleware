@@ -1,23 +1,16 @@
 import { Prisma } from "@prisma/client";
 
 import { NestedMiddleware, MiddlewareCall } from "./types";
-import { extractNestedActions } from "./utils/actions";
+import { extractNestedActions } from "./utils/extractNestedActions";
 import { executeMiddleware } from "./utils/execution";
 import { buildParamsFromCalls } from "./utils/params";
-import { getNestedResult, setNestedResult } from "./utils/results";
-
-if (!Prisma.dmmf) {
-  throw new Error(
-    "Prisma DMMF not found, please generate Prisma client using `npx prisma generate`"
-  );
-}
-
-export const relationsByModel: Record<string, Prisma.DMMF.Field[]> = {};
-Prisma.dmmf.datamodel.models.forEach((model: Prisma.DMMF.Model) => {
-  relationsByModel[model.name] = model.fields.filter(
-    (field) => field.kind === "object" && field.relationName
-  );
-});
+import { buildTargetRelationPath } from "./utils/targets";
+import {
+  addIdSymbolsToResult,
+  getRelationResult,
+  stripIdSymbolsFromResult,
+  updateResultRelation,
+} from "./utils/results";
 
 function isFulfilled(
   result: PromiseSettledResult<any>
@@ -35,18 +28,15 @@ export function createNestedMiddleware<T>(
   middleware: NestedMiddleware
 ): Prisma.Middleware<T> {
   const nestedMiddleware: NestedMiddleware = async (params, next) => {
-    const relations = relationsByModel[params.model || ""] || [];
     let calls: MiddlewareCall[] = [];
 
     try {
       const executionResults = await Promise.allSettled(
-        relations.flatMap((relation) =>
-          extractNestedActions(params, relation).map((nestedAction) =>
-            executeMiddleware(
-              nestedMiddleware,
-              nestedAction.params,
-              nestedAction.target
-            )
+        extractNestedActions(params).map((nestedAction) =>
+          executeMiddleware(
+            middleware,
+            nestedAction.params,
+            nestedAction.target
           )
         )
       );
@@ -55,30 +45,88 @@ export function createNestedMiddleware<T>(
       // next promises if we find a rejection
       calls = executionResults
         .filter(isFulfilled)
-        .map(({ value: call }) => call);
+        .flatMap(({ value }) => value);
 
       // consider any rejected execution as a failure of all nested middleware
       const failedExecution = executionResults.find(isRejected);
       if (failedExecution) throw failedExecution.reason;
 
+      // build updated params from middleware calls
+      const updatedParams = buildParamsFromCalls(calls, params);
+
       // evaluate result from parent middleware
-      const result = await middleware(
-        buildParamsFromCalls(calls, params),
-        next
-      );
+      const result = await middleware(updatedParams, next);
 
-      // resolve nested middleware next functions with relevant slice of result
-      await Promise.all(
+      // bail out if result is null
+      if (result === null) {
+        calls.forEach((call) => call.nextPromise.resolve(undefined));
+        await Promise.all(calls.map((call) => call.result));
+        return null;
+      }
+
+      // add id symbols to result so we can use them to update result relations
+      // with the results from nested middleware
+      addIdSymbolsToResult(result);
+
+      const nestedNextResults = await Promise.all(
         calls.map(async (call) => {
-          // if relationship hasn't been included nestedResult is undefined.
-          call.nextPromise.resolve(
-            result && getNestedResult(result, call.target.relationName)
-          );
+          const relationsPath = buildTargetRelationPath(call.target);
 
-          // set final result relation to be result of nested middleware
-          setNestedResult(result, call.target.relationName, await call.result);
+          if (result === null || !relationsPath) {
+            call.nextPromise.resolve(undefined);
+            await call.result;
+            return null;
+          }
+
+          const relationResults = getRelationResult(result, relationsPath);
+          call.nextPromise.resolve(relationResults);
+          const updatedResult = await call.result;
+
+          if (typeof relationResults === "undefined") {
+            return null;
+          }
+
+          return {
+            relationsPath,
+            updatedResult,
+          };
         })
       );
+      
+
+      // keep only the relevant result updates from nested next results
+      const resultUpdates = nestedNextResults.filter(
+        (update): update is { relationsPath: string[]; updatedResult: any } =>
+          !!update
+      );
+
+      resultUpdates
+        .sort((a, b) => b.relationsPath.length - a.relationsPath.length)
+        .forEach(({ relationsPath, updatedResult }, i) => {
+          const remainingUpdates = resultUpdates.slice(i);
+          const nextUpdatePath = relationsPath.slice(0, -1).join(".");
+
+          const nextUpdate = remainingUpdates.find(
+            (update) => update?.relationsPath.join(".") === nextUpdatePath
+          );
+
+          if (nextUpdate) {
+            updateResultRelation(
+              nextUpdate.updatedResult,
+              relationsPath[relationsPath.length - 1],
+              updatedResult
+            );
+            return;
+          }
+
+          updateResultRelation(
+            result,
+            relationsPath[relationsPath.length - 1],
+            updatedResult
+          );
+        });
+
+      stripIdSymbolsFromResult(result);
 
       return result;
     } catch (e) {

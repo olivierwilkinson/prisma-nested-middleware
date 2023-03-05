@@ -9,20 +9,17 @@ import {
   Target,
 } from "../types";
 
-import { isReadAction, isWriteAction } from "./actions";
-import { isReadTarget, isWriteTarget } from "./targets";
-
 export async function executeMiddleware(
   middleware: NestedMiddleware,
   params: NestedParams,
   target: Target
-): Promise<MiddlewareCall> {
-  const originalParams = cloneDeep(params);
-
-  const paramsUpdatedPromise = new DeferredPromise<NestedParams>();
+): Promise<MiddlewareCall[]> {
+  const paramsUpdatedPromise = new DeferredPromise<
+    NestedParams | NestedParams[]
+  >();
   const nextPromise = new DeferredPromise<any>();
 
-  const result = middleware(params, (updatedParams) => {
+  const result = middleware(cloneDeep(params), (updatedParams) => {
     paramsUpdatedPromise.resolve(updatedParams);
     return nextPromise;
   }).catch((e) => {
@@ -37,8 +34,38 @@ export async function executeMiddleware(
 
   const updatedParams = await paramsUpdatedPromise;
 
+  if (Array.isArray(updatedParams)) {
+    const calls = await Promise.all(
+      updatedParams.map((updatedParamsItem) => {
+        // execute middleware with updated params if action has changed
+        if (updatedParamsItem.action !== params.action) {
+          return executeMiddleware(
+            middleware,
+            updatedParamsItem,
+            omit(target, "index") as Target
+          );
+        }
+
+        return [
+          {
+            nextPromise,
+            result,
+            updatedParams: updatedParamsItem,
+            origin: target,
+            target: {
+              ...target,
+              action: updatedParamsItem.action as any,
+            },
+          },
+        ];
+      })
+    );
+
+    return calls.flat();
+  }
+
   // execute middleware with updated params if action has changed
-  if (updatedParams.action !== originalParams.action) {
+  if (updatedParams.action !== params.action) {
     return executeMiddleware(
       middleware,
       updatedParams,
@@ -46,34 +73,13 @@ export async function executeMiddleware(
     );
   }
 
-  if (isWriteAction(updatedParams.action) && isWriteTarget(target)) {
-    return {
+  return [
+    {
       nextPromise,
       result,
       updatedParams,
       origin: target,
-      target: {
-        action: updatedParams.action,
-        field: target.field,
-        relationName: target.relationName,
-        index: target.index,
-      },
-    };
-  }
-
-  if (isReadAction(updatedParams.action) && isReadTarget(target)) {
-    return {
-      nextPromise,
-      result,
-      updatedParams,
-      origin: target,
-      target: {
-        action: updatedParams.action,
-        field: target.field,
-        relationName: target.relationName,
-      },
-    };
-  }
-
-  throw new Error("Invalid target and params combination");
+      target: { ...target, action: updatedParams.action as any },
+    },
+  ];
 }

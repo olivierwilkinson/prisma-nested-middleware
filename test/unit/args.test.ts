@@ -1,10 +1,32 @@
 import faker from "faker";
+import { set } from "lodash";
 
-import { createNestedMiddleware } from "../src";
-import { createParams } from "./utils/createParams";
-import { wait } from "./utils/wait";
+import { createNestedMiddleware } from "../../src";
+import { createParams } from "./helpers/createParams";
+import { wait } from "./helpers/wait";
 
 describe("params", () => {
+  it("does not mutate passed params object", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      params.args.test = "test";
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+        posts: {
+          create: { title: faker.lorem.sentence() },
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(params.args).not.toHaveProperty("test");
+    expect(params.args.data.posts.create).not.toHaveProperty("test");
+  });
+
   it("allows middleware to modify root args", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       return next({
@@ -75,10 +97,8 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            data: {
-              ...params.args.data,
-              number: faker.datatype.number(),
-            },
+            ...params.args,
+            number: faker.datatype.number(),
           },
         });
       }
@@ -120,10 +140,8 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            data: {
-              ...params.args.data,
-              number: faker.datatype.number(),
-            },
+            ...params.args,
+            number: faker.datatype.number(),
           },
         });
       }
@@ -164,10 +182,8 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            data: {
-              ...params.args.data,
-              number: params.args.data.title === "first" ? 1 : 2,
-            },
+            ...params.args,
+            number: params.args.title === "first" ? 1 : 2,
           },
         });
       }
@@ -196,6 +212,90 @@ describe("params", () => {
               { title: "first", number: 1 },
               { title: "second", number: 2 },
             ],
+          },
+        },
+      },
+    });
+  });
+
+  it("allows middleware to modify deeply nested toOne update args", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.model === "Comment") {
+        if (params.scope && !params.scope.relations.to.isList) {
+          return next({
+            ...params,
+            args: { ...params.args, number: parseInt(params.args.content, 10) },
+          });
+        }
+
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            data: {
+              ...params.args.data,
+              number: parseInt(params.args.data.content, 10),
+            },
+          },
+        });
+      }
+
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "update", {
+      where: { id: faker.datatype.number() },
+      data: {
+        email: faker.internet.email(),
+        comments: {
+          update: {
+            where: { id: faker.datatype.number() },
+            data: {
+              content: "1",
+              repliedTo: {
+                update: {
+                  content: "2",
+                  repliedTo: {
+                    update: {
+                      content: "3",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        data: {
+          ...params.args.data,
+          comments: {
+            update: {
+              where: params.args.data.comments.update.where,
+              data: {
+                content: "1",
+                number: 1,
+                repliedTo: {
+                  update: {
+                    content: "2",
+                    number: 2,
+                    repliedTo: {
+                      update: {
+                        content: "3",
+                        number: 3,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -306,10 +406,8 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            data: {
-              ...params.args.data,
-              number: params.args.data.content === "first post comment" ? 1 : 2,
-            },
+            ...params.args,
+            number: params.args.content === "first post comment" ? 1 : 2,
           },
         });
       }
@@ -397,9 +495,20 @@ describe("params", () => {
   it("allows middleware to modify args of deeply nested lists of create operations", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "create" && params.model === "Comment") {
+        if (params.scope) {
+          return next({
+            ...params,
+            args: {
+              ...params.args,
+              number: params.args.content === "first post comment" ? 1 : 2,
+            },
+          });
+        }
+
         return next({
           ...params,
           args: {
+            ...params.args,
             data: {
               ...params.args.data,
               number: params.args.data.content === "first post comment" ? 1 : 2,
@@ -715,6 +824,17 @@ describe("params", () => {
           },
         });
       }
+      if (params.action === "select" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            select: {
+              content: true,
+            },
+          },
+        });
+      }
       return next(params);
     });
 
@@ -1026,6 +1146,444 @@ describe("params", () => {
     });
   });
 
+  it("allows user to modify nested where args", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "where" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            content: "bar",
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findMany", {
+      where: {
+        posts: {
+          some: {
+            comments: {
+              some: {
+                content: "foo",
+              },
+            },
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith(
+      set(params, "args.where.posts.some.comments.some.content", "bar")
+    );
+  });
+
+  it("allows user to modify nested where args by removing a field", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "where" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            // remove content and replace it with updatedAt
+            updatedAt: {
+              gt: new Date(),
+            },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findMany", {
+      where: {
+        posts: {
+          some: {
+            comments: {
+              some: {
+                content: "foo",
+              },
+            },
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith(
+      set(params, "args.where.posts.some.comments.some", {
+        updatedAt: {
+          gt: expect.any(Date),
+        },
+      })
+    );
+  });
+
+  it("allows user to modify nested where args with nested where", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "where" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            content: {
+              contains: "bar",
+            },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findMany", {
+      where: {
+        posts: {
+          some: {
+            comments: {
+              some: {
+                content: "foo",
+              },
+            },
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith(
+      set(params, "args.where.posts.some.comments.some.content", {
+        contains: "bar",
+      })
+    );
+  });
+
+  it("allows user to modify nested where args with nested where in logical operation", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "where" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            content: {
+              contains: "bar",
+            },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findMany", {
+      where: {
+        posts: {
+          some: {
+            AND: [
+              {
+                author: {
+                  id: 1,
+                },
+              },
+              {
+                comments: {
+                  some: {
+                    content: "foo",
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith(
+      set(params, "args.where.posts.some.AND.1.comments.some.content", {
+        contains: "bar",
+      })
+    );
+  });
+
+  it("allows user to modify where args deeply nested in logical operations", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (
+        params.action === "where" &&
+        params.model === "User" &&
+        params.scope
+      ) {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            ...(params.args.id ? { id: params.args.id + 1 } : {}),
+          },
+        });
+      }
+
+      if (params.action === "where" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            content: "bar",
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findMany", {
+      where: {
+        posts: {
+          some: {
+            AND: [
+              {
+                NOT: {
+                  OR: [
+                    {
+                      AND: [
+                        {
+                          NOT: {
+                            OR: [
+                              {
+                                id: 1,
+                                author: {
+                                  id: 2,
+                                },
+                              },
+                            ],
+                          },
+                        },
+                      ],
+                      comments: {
+                        some: {
+                          content: "foo",
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    set(
+      params,
+      "args.where.posts.some.AND.0.NOT.OR.0.AND.0.NOT.OR.0.author.id",
+      3
+    );
+    set(
+      params,
+      "args.where.posts.some.AND.0.NOT.OR.0.comments.some.content",
+      "bar"
+    );
+
+    expect(next).toHaveBeenCalledWith(params);
+  });
+
+  it("allows user to modify nested include where args", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "where" && params.model === "Post") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            title: "bar",
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findUnique", {
+      where: { id: 1 },
+      include: {
+        posts: {
+          where: {
+            title: "foo",
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith(
+      set(params, "args.include.posts.where.title", "bar")
+    );
+  });
+
+  it("allows user to modify nested select where args", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "where" && params.model === "Post") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            title: "bar",
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findUnique", {
+      where: { id: 1 },
+      select: {
+        posts: {
+          where: {
+            title: "foo",
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith(
+      set(params, "args.select.posts.where.title", "bar")
+    );
+  });
+
+  it("allows user to modify nested where relation args in nested include where", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "where" && params.model === "Post") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            title: "bar",
+          },
+        });
+      }
+      if (params.action === "where" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            content: "bar",
+          },
+        });
+      }
+      if (params.action === "where" && params.model === "User") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            email: "bar",
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findUnique", {
+      where: { id: 1 },
+      include: {
+        posts: {
+          where: {
+            title: "foo",
+            AND: [
+              { author: { id: 1, email: "foo" } },
+              { comments: { every: { content: "foo" } } },
+            ],
+            OR: [{ NOT: { author: { id: 1, email: "foo" } } }],
+            NOT: { comments: { some: { content: "foo" } } },
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    set(params, "args.include.posts.where.title", "bar");
+    set(params, "args.include.posts.where.AND.0.author.email", "bar");
+    set(params, "args.include.posts.where.AND.1.comments.every.content", "bar");
+    set(params, "args.include.posts.where.OR.0.NOT.author.email", "bar");
+    set(params, "args.include.posts.where.NOT.comments.some.content", "bar");
+
+    expect(next).toHaveBeenCalledWith(params);
+  });
+
+  it("allows user to modify nested where relation args in nested select where", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "where" && params.model === "Post") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            title: "bar",
+          },
+        });
+      }
+      if (params.action === "where" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            content: "bar",
+          },
+        });
+      }
+      if (params.action === "where" && params.model === "User") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            email: "bar",
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findUnique", {
+      where: { id: 1 },
+      select: {
+        posts: {
+          where: {
+            title: "foo",
+            AND: [
+              { author: { id: 1, email: "foo" } },
+              { comments: { every: { content: "foo" } } },
+            ],
+            OR: [{ NOT: { author: { id: 1, email: "foo" } } }],
+            NOT: { comments: { some: { content: "foo" } } },
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    set(params, "args.select.posts.where.title", "bar");
+    set(params, "args.select.posts.where.AND.0.author.email", "bar");
+    set(params, "args.select.posts.where.AND.1.comments.every.content", "bar");
+    set(params, "args.select.posts.where.OR.0.NOT.author.email", "bar");
+    set(params, "args.select.posts.where.NOT.comments.some.content", "bar");
+
+    expect(next).toHaveBeenCalledWith(params);
+  });
+
   it("waits for all middleware to finish before calling next when modifying args", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       if (params.model === "Post") {
@@ -1033,10 +1591,8 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            data: {
-              ...params.args.data,
-              number: faker.datatype.number(),
-            },
+            ...params.args,
+            number: faker.datatype.number(),
           },
         });
       }
@@ -1046,10 +1602,8 @@ describe("params", () => {
         return next({
           ...params,
           args: {
-            data: {
-              ...params.args.data,
-              number: faker.datatype.number(),
-            },
+            ...params.args,
+            number: faker.datatype.number(),
           },
         });
       }
