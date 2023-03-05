@@ -8,7 +8,7 @@ import {
   Target,
 } from "../types";
 
-import { normaliseRootArgs } from './args';
+import { normaliseRootArgs } from "./args";
 
 export const readActions: NestedReadAction[] = ["include", "select"];
 export const writeActions: NestedWriteAction[] = [
@@ -89,6 +89,7 @@ export function extractNestedWriteActions(
                 runInTransaction,
                 dataPath: [],
                 scope: params,
+                relation,
               },
             }))
           );
@@ -108,6 +109,7 @@ export function extractNestedWriteActions(
             runInTransaction,
             dataPath: [],
             scope: params,
+            relation,
           },
         });
       });
@@ -138,6 +140,7 @@ export function extractNestedReadActions(
         runInTransaction,
         dataPath: [],
         scope: params,
+        relation,
       },
     });
 
@@ -152,6 +155,7 @@ export function extractNestedReadActions(
           runInTransaction,
           dataPath: [],
           scope: params,
+          relation,
         },
       });
     }

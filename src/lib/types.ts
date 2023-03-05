@@ -44,6 +44,7 @@ export type MiddlewareCall = {
 export type NestedParams = Omit<Prisma.MiddlewareParams, "action"> & {
   action: NestedAction;
   scope?: NestedParams;
+  relation?: Prisma.DMMF.Field;
 };
 
 export type NestedMiddleware<T = any> = (
