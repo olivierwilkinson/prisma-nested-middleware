@@ -1,8 +1,8 @@
 import faker from "faker";
 
-import { createNestedMiddleware } from "../src";
-import { createParams } from "./utils/createParams";
-import { wait } from "./utils/wait";
+import { createNestedMiddleware } from "../../src";
+import { createParams } from "./helpers/createParams";
+import { wait } from "./helpers/wait";
 
 async function createAsyncError() {
   await wait(100);

@@ -46,6 +46,7 @@ model Comment {
 model Profile {
   id     Int     @id @default(autoincrement())
   bio    String?
+  age    Int?
   user   User    @relation(fields: [userId], references: [id])
   userId Int     @unique
 }
