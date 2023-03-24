@@ -2,11 +2,12 @@ import { Prisma } from "@prisma/client";
 import faker from "faker";
 import { get } from "lodash";
 
-import { createNestedMiddleware, NestedParams } from "../src";
+import { createNestedMiddleware, NestedParams, readOperations, writeOperations } from "../src";
 import { createParams } from "./utils/createParams";
 
 type MiddlewareCall<Model extends Prisma.ModelName> = {
   model: Model;
+  relation?: Prisma.DMMF.Field;
   action:
     | "create"
     | "update"
@@ -25,6 +26,13 @@ type MiddlewareCall<Model extends Prisma.ModelName> = {
   scope?: MiddlewareCall<any>;
 };
 
+const operations = [...readOperations, ...writeOperations].reduce((acc, x) => {
+  acc[x] = true;
+  return acc;
+}, {} as Record<string, boolean>);
+const getLastFieldNameFromArgsPath = (argsPath: string) => argsPath.split(".").reverse().find(x =>
+  !operations[x] && !/\d+/.test(x)
+)
 function nestedParamsFromCall<Model extends Prisma.ModelName>(
   rootParams: Prisma.MiddlewareParams,
   call: MiddlewareCall<Model>
@@ -35,11 +43,19 @@ function nestedParamsFromCall<Model extends Prisma.ModelName>(
     call.action,
     call.action === "create" ? { data: args } : args
   );
+
+  const scope = call.scope
+    ? nestedParamsFromCall(rootParams, call.scope)
+    : rootParams as NestedParams;
+
   return {
     ...params,
-    scope: call.scope
-      ? nestedParamsFromCall(rootParams, call.scope)
-      : rootParams,
+    relation: Prisma.dmmf.datamodel
+      .models.find(x => x.name == scope.model)
+      ?.fields.find(x =>
+        x.name == getLastFieldNameFromArgsPath(call.argsPath)
+      ),
+    scope
   };
 }
 

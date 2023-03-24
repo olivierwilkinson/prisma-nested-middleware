@@ -26,6 +26,7 @@ export type NestedAction =
 
 export type NestedParams = Omit<Prisma.MiddlewareParams, "action"> & {
   action: NestedAction;
+  relation?: Prisma.DMMF.Field;
   scope?: NestedParams;
 };
 
@@ -44,8 +45,8 @@ type PromiseCallbackRef = {
   reject: (reason?: any) => void;
 };
 
-const readOperations: NestedReadAction[] = ["include", "select"];
-const writeOperations: NestedAction[] = [
+export const readOperations: NestedReadAction[] = ["include", "select"];
+export const writeOperations: NestedAction[] = [
   "create",
   "update",
   "upsert",
@@ -125,6 +126,7 @@ function extractNestedWriteOperations(
               params: {
                 ...params,
                 model,
+                relation,
                 action: operation,
                 args: operation === "create" ? { data: item } : item,
                 scope: params,
@@ -139,6 +141,7 @@ function extractNestedWriteOperations(
           params: {
             ...params,
             model,
+            relation,
             action: operation,
             args:
               operation === "create"
@@ -169,6 +172,7 @@ function extractNestedReadOperations(
           params: {
             ...params,
             model,
+            relation,
             action: operation,
             args: arg,
             scope: params,
