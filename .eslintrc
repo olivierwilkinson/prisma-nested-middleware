@@ -22,6 +22,15 @@
     ],
     "max-lines-per-function": "off",
     "consistent-return": "off",
-    "jest/no-if": "off"
-  }
+    "jest/no-if": "off",
+    "one-var": "off"
+  },
+  "overrides": [
+    {
+      "files": ["*.test.ts"],
+      "rules": {
+        "max-lines": "off"
+      }
+    }
+  ]
 }

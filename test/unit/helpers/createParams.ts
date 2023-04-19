@@ -6,6 +6,8 @@ type DelegateByModel<Model extends Prisma.ModelName> = Model extends "User"
   ? Prisma.PostDelegate<undefined>
   : Model extends "Profile"
   ? Prisma.ProfileDelegate<undefined>
+  : Model extends "Comment"
+  ? Prisma.CommentDelegate<undefined>
   : never;
 
 type SelectByModel<Model extends Prisma.ModelName> = Model extends "User"
@@ -14,6 +16,8 @@ type SelectByModel<Model extends Prisma.ModelName> = Model extends "User"
   ? Prisma.PostSelect
   : Model extends "Profile"
   ? Prisma.ProfileSelect
+  : Model extends "Comment"
+  ? Prisma.CommentSelect
   : never;
 
 type IncludeByModel<Model extends Prisma.ModelName> = Model extends "User"
@@ -22,13 +26,16 @@ type IncludeByModel<Model extends Prisma.ModelName> = Model extends "User"
   ? Prisma.PostInclude
   : Model extends "Profile"
   ? Prisma.ProfileInclude
+  : Model extends "Comment"
+  ? Prisma.CommentInclude
   : never;
 
 type ActionByModel<Model extends Prisma.ModelName> =
   | keyof DelegateByModel<Model>
   | "connectOrCreate"
   | "select"
-  | "include";
+  | "include"
+  | "where";
 
 type ArgsByAction<
   Model extends Prisma.ModelName,
@@ -41,16 +48,22 @@ type ArgsByAction<
   ? Parameters<DelegateByModel<Model>["upsert"]>[0]
   : Action extends "delete"
   ? Parameters<DelegateByModel<Model>["delete"]>[0]
-  : Action extends "deleteMany"
-  ? Parameters<DelegateByModel<Model>["deleteMany"]>[0]
+  : Action extends "createMany"
+  ? Parameters<DelegateByModel<Model>["createMany"]>[0]
   : Action extends "updateMany"
   ? Parameters<DelegateByModel<Model>["updateMany"]>[0]
+  : Action extends "deleteMany"
+  ? Parameters<DelegateByModel<Model>["deleteMany"]>[0]
   : Action extends "findUnique"
   ? Parameters<DelegateByModel<Model>["findUnique"]>[0]
   : Action extends "findFirst"
   ? Parameters<DelegateByModel<Model>["findFirst"]>[0]
   : Action extends "findMany"
   ? Parameters<DelegateByModel<Model>["findMany"]>[0]
+  : Action extends "count"
+  ? Parameters<DelegateByModel<Model>["count"]>[0]
+  : Action extends "aggregate"
+  ? Parameters<DelegateByModel<Model>["aggregate"]>[0]
   : Action extends "connectOrCreate"
   ? {
       where: Parameters<DelegateByModel<Model>["findUnique"]>[0];
