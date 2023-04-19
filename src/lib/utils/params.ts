@@ -2,7 +2,6 @@ import set from "lodash/set";
 import get from "lodash/get";
 import unset from "lodash/unset";
 import merge from "lodash/merge";
-import cloneDeep from "lodash/cloneDeep";
 import { omit } from "lodash";
 
 import {
@@ -32,6 +31,7 @@ import {
   toOneRelationNonListActions,
 } from "./actions";
 import { fieldsByWriteAction } from "./extractNestedActions";
+import { cloneParams } from "./cloneParams";
 
 function addWriteArgsToParams(
   params: NestedParams,
@@ -159,7 +159,7 @@ export function buildParamsFromCalls(
   calls: MiddlewareCall[],
   parentParams: NestedParams
 ) {
-  const finalParams = cloneDeep(parentParams);
+  const finalParams = cloneParams(parentParams);
 
   // calls should update the parent calls updated params
 
