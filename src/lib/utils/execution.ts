@@ -1,6 +1,5 @@
 import { DeferredPromise } from "@open-draft/deferred-promise";
 import { omit } from "lodash";
-import cloneDeep from "lodash/cloneDeep";
 
 import {
   MiddlewareCall,
@@ -8,6 +7,7 @@ import {
   NestedParams,
   Target,
 } from "../types";
+import { cloneParams } from "./cloneParams";
 
 export async function executeMiddleware(
   middleware: NestedMiddleware,
@@ -19,7 +19,7 @@ export async function executeMiddleware(
   >();
   const nextPromise = new DeferredPromise<any>();
 
-  const result = middleware(cloneDeep(params), (updatedParams) => {
+  const result = middleware(cloneParams(params), (updatedParams) => {
     paramsUpdatedPromise.resolve(updatedParams);
     return nextPromise;
   }).catch((e) => {
