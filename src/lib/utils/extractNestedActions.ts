@@ -309,13 +309,14 @@ export function extractRelationWriteActions(
         (part): part is string => !!part
       );
       const arg = get(params, argPath, {});
+      if (!arg) return; // Prisma validation error
 
       Object.keys(arg)
         .filter(isWriteAction)
         .forEach((action) => {
           /*
             Add single writes passed as a list as separate operations.
-  
+
             Checking if the operation is an array is enough since only lists of
             separate operations are passed as arrays at the top level. For example
             a nested create may be passed as an array but a nested createMany will
