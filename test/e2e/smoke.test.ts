@@ -1,4 +1,4 @@
-import { Post, PrismaClient, User } from "@prisma/client";
+import { Post, Prisma, PrismaClient, User } from "@prisma/client";
 import faker from "faker";
 
 import { createNestedMiddleware } from "../../src";
@@ -131,6 +131,26 @@ describe("smoke", () => {
         },
       });
       expect(updatedComment).not.toBeNull();
+
+      // supports Json null values
+      await testClient.profile.create({
+        data: {
+          userId: secondUser.id,
+          meta: Prisma.DbNull,
+        },
+      });
+
+      const profile = await testClient.profile.findFirst({
+        where: {
+          OR: [
+            { meta: { equals: Prisma.AnyNull } },
+            { meta: { equals: Prisma.DbNull } },
+            { meta: { equals: Prisma.JsonNull } },
+          ],
+        },
+      });
+      expect(profile).not.toBeNull();
+      expect(profile!.meta).toBe(null);
     });
   });
 });

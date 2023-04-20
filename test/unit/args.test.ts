@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import faker from "faker";
 import { set } from "lodash";
 
@@ -25,6 +26,32 @@ describe("params", () => {
 
     expect(params.args).not.toHaveProperty("test");
     expect(params.args.data.posts.create).not.toHaveProperty("test");
+  });
+
+  it("passes through instances of Prisma.NullTypes to next", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("Profile", "findFirst", {
+      where: {
+        OR: [
+          { meta: { equals: Prisma.JsonNull } },
+          { meta: { equals: Prisma.DbNull } },
+          { meta: { equals: Prisma.AnyNull } },
+        ],
+      },
+    });
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith(params);
+    expect(next.mock.calls[0][0].args.where.OR).toHaveLength(3);
+    next.mock.calls[0][0].args.where.OR.forEach(
+      ({ meta }: any, index: number) => {
+        expect(meta.equals).toBe(params.args.where.OR[index].meta.equals);
+      }
+    );
   });
 
   it("allows middleware to modify root args", async () => {
