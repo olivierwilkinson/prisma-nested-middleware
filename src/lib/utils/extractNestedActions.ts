@@ -86,7 +86,7 @@ export function extractRelationLogicalWhereActions(
 
       if (Array.isArray(logicalArg)) {
         logicalArg.forEach((where, index) => {
-          const arg = where[relation.name];
+          const arg = where?.[relation.name];
           if (!arg) return;
 
           const operations = [...parentOperations, { logicalOperator, index }];
