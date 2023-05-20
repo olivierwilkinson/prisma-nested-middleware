@@ -1611,6 +1611,64 @@ describe("params", () => {
     expect(next).toHaveBeenCalledWith(params);
   });
 
+  it("ignores invalid values passed to where logical operations", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "where" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            content: {
+              contains: "bar",
+            },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "findMany", {
+      where: {
+        posts: {
+          some: {
+            AND: [
+              {
+                comments: {
+                  some: {
+                    content: "foo",
+                  },
+                },
+              },
+              // @ts-expect-error invalid value
+              null,
+              // @ts-expect-error invalid value
+              undefined,
+              // @ts-expect-error invalid value
+              1,
+              // @ts-expect-error invalid value
+              "foo",
+              // @ts-expect-error invalid value
+              true,
+            ],
+            // @ts-expect-error invalid value
+            NOT: null,
+            // @ts-expect-error invalid value
+            OR: true,
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith(
+      set(params, "args.where.posts.some.AND.0.comments.some.content", {
+        contains: "bar",
+      })
+    );
+  });
+
   it("waits for all middleware to finish before calling next when modifying args", async () => {
     const nestedMiddleware = createNestedMiddleware(async (params, next) => {
       if (params.model === "Post") {
