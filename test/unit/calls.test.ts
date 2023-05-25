@@ -23,7 +23,8 @@ type MiddlewareCall<Model extends Prisma.ModelName> = {
     | "findMany"
     | "include"
     | "select"
-    | "where";
+    | "where"
+    | "groupBy";
   argsPath: string;
   scope?: MiddlewareCall<any>;
   relations: {
@@ -99,6 +100,13 @@ describe("calls", () => {
     {
       description: "aggregate",
       rootParams: createParams("User", "aggregate", {}),
+    },
+    {
+      description: "groupBy",
+      rootParams: createParams("User", "groupBy", {
+        by: ["email"],
+        orderBy: { email: "asc" },
+      })
     },
     {
       description: "nested create in create",
@@ -4044,6 +4052,32 @@ describe("calls", () => {
                 },
               },
             },
+          },
+        },
+      ],
+    },
+    {
+      description: "where in groupBy",
+      rootParams: createParams("User", "groupBy", {
+        by: ["id"],
+        orderBy: { id: "asc" },
+        where: {
+          posts: {
+            some: {
+              title: "foo",
+            },
+          },
+        },
+      }),
+      nestedCalls: [
+        {
+          action: "where",
+          model: "Post",
+          argsPath: "args.where.posts.some",
+          modifier: "some",
+          relations: {
+            to: getModelRelation("User", "posts"),
+            from: getModelRelation("Post", "author"),
           },
         },
       ],

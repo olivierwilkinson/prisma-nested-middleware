@@ -4,6 +4,7 @@ import { DeferredPromise } from "@open-draft/deferred-promise";
 export type Modifier = "is" | "isNot" | "some" | "none" | "every";
 export type LogicalOperator = "AND" | "OR" | "NOT";
 
+export type MissingPrismaAction = "groupBy";
 export type NestedQueryAction = "where";
 export type NestedReadAction = "include" | "select";
 export type NestedWriteAction =
@@ -20,6 +21,7 @@ export type NestedWriteAction =
 
 export type NestedAction =
   | Prisma.PrismaAction
+  | MissingPrismaAction
   | NestedWriteAction
   | NestedReadAction
   | NestedQueryAction;
