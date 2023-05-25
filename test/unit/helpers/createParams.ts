@@ -64,6 +64,8 @@ type ArgsByAction<
   ? Parameters<DelegateByModel<Model>["count"]>[0]
   : Action extends "aggregate"
   ? Parameters<DelegateByModel<Model>["aggregate"]>[0]
+  : Action extends "groupBy"
+  ? Parameters<DelegateByModel<Model>["groupBy"]>[0]
   : Action extends "connectOrCreate"
   ? {
       where: Parameters<DelegateByModel<Model>["findUnique"]>[0];

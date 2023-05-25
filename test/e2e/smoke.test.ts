@@ -10,9 +10,6 @@ describe("smoke", () => {
   let secondUser: User;
   let post: Post;
 
-  beforeAll(() => {
-    testClient = new PrismaClient();
-  });
   beforeEach(async () => {
     firstUser = await client.user.create({
       data: {
@@ -70,6 +67,7 @@ describe("smoke", () => {
 
   describe("vanilla", () => {
     beforeAll(() => {
+      testClient = new PrismaClient();
       testClient.$use(
         createNestedMiddleware((params, next) => {
           return next(params);
@@ -151,6 +149,35 @@ describe("smoke", () => {
       });
       expect(profile).not.toBeNull();
       expect(profile!.meta).toBe(null);
+    });
+  });
+
+  describe('groupBy', () => {
+    beforeAll(() => {
+      testClient = new PrismaClient();
+      testClient.$use(
+        createNestedMiddleware((params, next) => {
+          if (params.action !== 'groupBy') {
+            throw new Error('expected groupBy action')
+          }
+          return next(params);
+        })
+      );
+    });
+
+    it('calls middleware with groupBy action', async () => {
+      await expect(testClient.comment.findMany()).rejects.toThrowError(
+        'expected groupBy action'
+      );
+
+      const groupBy = await testClient.comment.groupBy({
+        by: ['authorId'],
+        orderBy: {
+          authorId: 'asc',
+        },
+      });
+
+      expect(groupBy).toHaveLength(1);
     });
   });
 });
