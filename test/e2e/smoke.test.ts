@@ -152,28 +152,28 @@ describe("smoke", () => {
     });
   });
 
-  describe('groupBy', () => {
+  describe("groupBy", () => {
     beforeAll(() => {
       testClient = new PrismaClient();
       testClient.$use(
         createNestedMiddleware((params, next) => {
-          if (params.action !== 'groupBy') {
-            throw new Error('expected groupBy action')
+          if (params.action !== "groupBy") {
+            throw new Error("expected groupBy action");
           }
           return next(params);
         })
       );
     });
 
-    it('calls middleware with groupBy action', async () => {
+    it("calls middleware with groupBy action", async () => {
       await expect(testClient.comment.findMany()).rejects.toThrowError(
-        'expected groupBy action'
+        "expected groupBy action"
       );
 
       const groupBy = await testClient.comment.groupBy({
-        by: ['authorId'],
+        by: ["authorId"],
         orderBy: {
-          authorId: 'asc',
+          authorId: "asc",
         },
       });
 

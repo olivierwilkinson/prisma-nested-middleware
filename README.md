@@ -871,6 +871,25 @@ For the "profile" relation the middleware function will be called with:
 }
 ```
 
+There is another case possible for selecting fields in Prisma. When including a model it is supported to use a select
+object to select fields from the included model. For example take the following query:
+
+```javascript
+const result = await client.user.findMany({
+  include: {
+    profile: {
+      select: {
+        bio: true,
+      },
+    },
+  },
+});
+```
+
+From v4 the "select" action is _not_ called for the "profile" relation. This is because it caused two different kinds
+of "select" action args, and it was not always possible to distinguish between them.
+See [Modifying Selected Fields](#modifying-selected-fields) for more information on how to handle selects.
+
 #### Select Results
 
 The `next` function for a `select` action resolves with the result of the `select` action. This is the same as the
@@ -1013,7 +1032,7 @@ client.$use(
 
     // createMany and upsert do not change
     [...]
-    
+
     // handle the "connectOrCreate" action
     if (params.action === "connectOrCreate") {
       if (!params.args.create.code) {
@@ -1023,6 +1042,115 @@ client.$use(
 
     // pass params to next middleware
     return next(params);
+  })
+);
+```
+
+### Modifying Selected Fields
+
+When writing middleware that modifies the selected fields of a model you must handle all actions that can contain a
+select object, this includes:
+
+- `select`
+- `include`
+- `findMany`
+- `findFirst`
+- `findUnique`
+- `findFirstOrThrow`
+- `findUniqueOrThrow`
+- `create`
+- `update`
+- `upsert`
+- `delete`
+ 
+This is because the `select` action is only called for relations found _within_ a select object. For example take the
+following query:
+
+```javascript
+const result = await client.user.findMany({
+  include: {
+    comments: {
+      select: {
+        title: true,
+        replies: {
+          select: {
+            title: true,
+          },
+        },
+      },
+    },
+  },
+});
+```
+
+For the above query the middleware function will be called with the following for the replies relation:
+
+```javascript
+{
+  action: 'select',
+  model: 'Comment',
+  args: {
+    select: {
+      title: true,
+    },
+  },
+  scope: {...}
+}
+```
+
+and the following for the comments relation:
+
+```javascript
+{
+  action: 'include',
+  model: 'Comment',
+  args: {
+    select: {
+      title: true,
+      replies: {
+        select: {
+          title: true,
+        }
+      },
+    },
+  },
+  scope: {...}
+}
+```
+
+So if you wanted to ensure that the "id" field is always selected you could write the following middleware:
+
+```javascript
+client.$use(
+  createNestedMiddleware((params, next) => {
+    if ([
+    'select',
+    'include',
+    'findMany',
+    'findFirst',
+    'findUnique',
+    'findFirstOrThrow',
+    'findUniqueOrThrow',
+    'create',
+    'update',
+    'upsert',
+    'delete',
+    ].includes(params.action)) {
+      if (typeof params.args === 'object' && params.args !== null && params.args.select) {
+        return next({
+          ...params,
+          args: {
+            ...params.args,
+            select: {
+              ...params.args.select,
+              id: true,
+            },
+          },
+        });
+      }
+    }
+
+    return next(params)
   })
 );
 ```
@@ -1060,7 +1188,7 @@ client.$use(
           ...params.where,
           invisible: false,
         },
-      })
+      });
     }
 
     // pass params to next middleware
@@ -1082,7 +1210,7 @@ client.$use(
           ...params.args,
           invisible: false,
         },
-      })
+      });
     }
 
     // handle root actions
@@ -1101,7 +1229,7 @@ client.$use(
           ...params.where,
           invisible: false,
         },
-      })
+      });
     }
 
     // pass params to next middleware

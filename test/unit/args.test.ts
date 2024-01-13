@@ -962,6 +962,54 @@ describe("params", () => {
     });
   });
 
+  it("allows middleware to modify select args nested in include select", async () => {
+    const nestedMiddleware = createNestedMiddleware((params, next) => {
+      if (params.action === "select" && params.model === "Comment") {
+        return next({
+          ...params,
+          args: {
+            where: { deleted: true },
+          },
+        });
+      }
+      return next(params);
+    });
+
+    const next = jest.fn((_: any) => Promise.resolve(null));
+    const params = createParams("User", "create", {
+      data: {
+        email: faker.internet.email(),
+      },
+      include: {
+        posts: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+    });
+
+    await nestedMiddleware(params, next);
+
+    expect(next).toHaveBeenCalledWith({
+      ...params,
+      args: {
+        ...params.args,
+        include: {
+          posts: {
+            select: {
+              comments: {
+                where: {
+                  deleted: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
   it("allows middleware to add data to nested createMany args", async () => {
     const nestedMiddleware = createNestedMiddleware((params, next) => {
       if (params.action === "createMany") {
