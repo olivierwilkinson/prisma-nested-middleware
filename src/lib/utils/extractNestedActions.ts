@@ -443,60 +443,6 @@ export function extractRelationReadActions(
           )
         );
       }
-
-      // push select nested in an include
-      if (action === "include" && arg.select) {
-        const nestedSelectActionInfo = {
-          params: {
-            model,
-            action: "select" as const,
-            args: arg.select,
-            runInTransaction,
-            dataPath: [],
-            scope: {
-              parentParams: readActionInfo.params,
-              relations: readActionInfo.params.scope.relations,
-            },
-          },
-          target: {
-            field: "include" as const,
-            action: "select" as const,
-            relationName: relation.name,
-            parentTarget,
-          },
-        };
-
-        nestedActions.push(nestedSelectActionInfo);
-
-        if (nestedSelectActionInfo.params.args?.where) {
-          const whereActionInfo = {
-            target: {
-              action: "where" as const,
-              relationName: relation.name,
-              readAction: "select" as const,
-              parentTarget: nestedSelectActionInfo.target,
-            },
-            params: {
-              model: nestedSelectActionInfo.params.model,
-              action: "where" as const,
-              args: nestedSelectActionInfo.params.args.where,
-              runInTransaction,
-              dataPath: [],
-              scope: {
-                parentParams: nestedSelectActionInfo.params,
-                relations: nestedSelectActionInfo.params.scope.relations,
-              },
-            },
-          };
-          nestedActions.push(whereActionInfo);
-          nestedActions.push(
-            ...extractRelationWhereActions(
-              whereActionInfo.params,
-              whereActionInfo.target
-            )
-          );
-        }
-      }
     });
   });
 

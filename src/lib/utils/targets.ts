@@ -34,9 +34,7 @@ export function buildOperationsPath(
 }
 
 export function buildQueryTargetPath(target: QueryTarget): string[] {
-  const path = target.parentTarget
-    ? buildTargetPath(target.parentTarget)
-    : [];
+  const path = target.parentTarget ? buildTargetPath(target.parentTarget) : [];
 
   if (!target.relationName) {
     return [...path, target.action];

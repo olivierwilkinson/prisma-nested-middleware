@@ -3125,37 +3125,5 @@ describe("actions", () => {
         set(params, "args.data.profile", { delete: false })
       );
     });
-
-    it("replaces existing include with select changed to include", async () => {
-      const nestedMiddleware = createNestedMiddleware((params, next) => {
-        if (params.action === "select") {
-          return next({
-            ...params,
-            action: "include",
-          });
-        }
-
-        return next(params);
-      });
-
-      const next = jest.fn((_: any) => Promise.resolve(null));
-      const params = createParams("User", "findUnique", {
-        where: { id: faker.datatype.number() },
-        include: {
-          posts: {
-            select: { deleted: true },
-            include: { author: true },
-          },
-        },
-      });
-
-      await nestedMiddleware(params, next);
-
-      expect(next).toHaveBeenCalledWith(
-        set(params, "args.include.posts", {
-          include: { deleted: true },
-        })
-      );
-    });
   });
 });

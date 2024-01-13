@@ -106,7 +106,7 @@ describe("calls", () => {
       rootParams: createParams("User", "groupBy", {
         by: ["email"],
         orderBy: { email: "asc" },
-      })
+      }),
     },
     {
       description: "nested create in create",
@@ -2385,24 +2385,6 @@ describe("calls", () => {
         },
         {
           action: "select",
-          model: "Post",
-          argsPath: "args.include.posts.select",
-          relations: {
-            to: getModelRelation("User", "posts"),
-            from: getModelRelation("Post", "author"),
-          },
-          scope: {
-            action: "include",
-            model: "Post",
-            argsPath: "args.include.posts",
-            relations: {
-              to: getModelRelation("User", "posts"),
-              from: getModelRelation("Post", "author"),
-            },
-          },
-        },
-        {
-          action: "select",
           model: "Comment",
           argsPath: "args.include.posts.select.comments",
           relations: {
@@ -2504,33 +2486,6 @@ describe("calls", () => {
             relations: {
               to: getModelRelation("User", "posts"),
               from: getModelRelation("Post", "author"),
-            },
-          },
-        },
-        {
-          action: "select",
-          model: "Comment",
-          argsPath: "args.include.posts.include.comments.select",
-          relations: {
-            to: getModelRelation("Post", "comments"),
-            from: getModelRelation("Comment", "post"),
-          },
-          scope: {
-            action: "include",
-            model: "Comment",
-            argsPath: "args.include.posts.include.comments",
-            relations: {
-              to: getModelRelation("Post", "comments"),
-              from: getModelRelation("Comment", "post"),
-            },
-            scope: {
-              action: "include",
-              model: "Post",
-              argsPath: "args.include.posts",
-              relations: {
-                to: getModelRelation("User", "posts"),
-                from: getModelRelation("Post", "author"),
-              },
             },
           },
         },
@@ -3635,24 +3590,6 @@ describe("calls", () => {
           relations: {
             to: getModelRelation("User", "posts"),
             from: getModelRelation("Post", "author"),
-          },
-        },
-        {
-          action: "select",
-          model: "Post",
-          argsPath: "args.include.posts.select",
-          relations: {
-            to: getModelRelation("User", "posts"),
-            from: getModelRelation("Post", "author"),
-          },
-          scope: {
-            action: "include",
-            model: "Post",
-            argsPath: "args.include.posts",
-            relations: {
-              to: getModelRelation("User", "posts"),
-              from: getModelRelation("Post", "author"),
-            },
           },
         },
         {
