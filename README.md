@@ -1046,7 +1046,7 @@ client.$use(
 );
 ```
 
-### Modifying Selected Fields
+### Modifying Selected Fields
 
 When writing middleware that modifies the selected fields of a model you must handle all actions that can contain a
 select object, this includes:
